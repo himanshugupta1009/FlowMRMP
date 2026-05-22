@@ -1,0 +1,116 @@
+newEnvAgent — Summary of Changes
+==================================
+
+Goal
+----
+Decouple the vehicle model and environment from the gym interface in FlowMRMP.
+The original codebase fused bicycle dynamics, maze grid, collision checking, and
+gym.Env into a single CarEnv class. This folder re-implements planning in a
+modular style matching the mapf_with_edge_bundles project architecture.
+
+
+Files Created
+-------------
+
+1. utils.py
+   All shared numba-JIT functions used across the framework:
+   Collision checkers:
+     - agent_circle(ax, ay, agent_radius, cx, cy, obs_radius)
+         Point-circle overlap test.
+     - agent_rectangle(ax, ay, agent_radius, x_min, x_max, y_min, y_max)
+         Point-AABB overlap test using closest-point method.
+   Planning utilities:
+     - euclidean_distance_numba_with_l   — distance on first L state components
+     - euclidean_distance_satisfaction_numba — distance threshold check
+     - validate_random_point_numba       — point-in-obstacle rejection for sampling
+     - is_state_valid_numba              — bounds + obstacle check with agent radius
+     - is_new_node_valid_numba           — validity check across an entire path
+
+2. environments.py
+   Continuous 2D geometric environment (no grid, no gym).
+     - CircularObstacle2D(x, y, r)
+     - RectangleObstacle2D(x, y, w, h)  — (x, y) is centre
+     - RectangularEnvironment(length, breadth, obstacles)
+         Stores env_start=[0,0], size=[length, breadth], obstacle_buffer,
+         boundary_buffer. Preprocesses obstacle lists into numpy arrays
+         (static_circular_obstacles: Nx3, static_rectangular_obstacles: Mx4)
+         for fast numba collision queries. Inlines preprocess logic directly
+         in _rebuild_vectorized_obstacles() — no external dependency.
+
+3. car.py
+   Pure-dynamics bicycle car agent (no gym, no CarEnv dependency).
+   State: [x, y, psi, v, D, delta]   Action: [dD, dDelta]
+   Physical parameters match car_env.py exactly.
+   Integration upgraded from Euler (car_env.py) to RK4.
+
+   Numba utility functions (imported from utils.py):
+     - euclidean_distance_numba_with_l
+     - euclidean_distance_satisfaction_numba
+     - validate_random_point_numba
+     - is_state_valid_numba
+     - is_new_node_valid_numba
+
+   Numba dynamics functions:
+     - bicycle_eom_numba        — equations of motion
+     - bicycle_move_vehicle_numba — single RK4 step with state bound clamping
+     - bicycle_get_next_state_numba — multi-substep integration, returns (state, path)
+
+   BicycleCar class:
+     - get_next_state(state, control, dt, num_steps=10)
+     - get_distance(state1, state2)     — Euclidean on (x, y) only
+     - get_random_action(rng)
+     - get_random_point(env, rng)       — samples valid (x,y) + random psi,v,D,delta
+     - is_state_valid(...)              — static method, delegates to numba
+     - is_new_node_valid(...)           — static method, delegates to numba
+     - agent_reached_goal(state, goal, goal_radius) — static method
+
+4. new_RRT.py
+   Kinodynamic RRT planner using BicycleCar + RectangularEnvironment directly.
+   No gym interface, no binary grid, no env.step().
+
+   create_local_map_from_env(env, agent_x, agent_y, agent_yaw, map_size, scale)
+     Replaces create_local_map() from FlowMRMP/common/map_utils.py.
+     Builds an (N, N) float32 occupancy grid in the robot's local frame by
+     transforming a meshgrid into world coordinates and testing each cell
+     against the geometric obstacle objects. Returns 0.0=free, 1.0=occupied.
+     The diffusion sampler receives the same format as before.
+
+   Node class — state, parent_action_seq, parent_states_seq, parent, num_visit.
+
+   NewRRTPlanner class:
+     - Nearest-neighbour search on (x, y) via KDTree.
+     - Goal sampling at rate goal_sample_rate.
+     - Edge propagation: outer loop over edge_length // action_horizon chunks,
+       each calling the diffusion sampler then _propagate_chunk().
+     - _propagate_chunk(): runs action_horizon bicycle steps, checks
+       is_state_valid after each step, returns early on collision or goal.
+     - Results dict: iterations, time, path, actions, number_of_nodes, path_time.
+     - reset() reinitialises the tree without rebuilding the sampler.
+
+5. trial.py
+   Trial script in mapf_with_edge_bundles style — hardcoded environment,
+   no CSV reading, runs 10 independent RRT trials with a 30-second budget each.
+
+   Environment (40 x 40 m):
+     5 circular obstacles + 2 rectangular obstacles, hardcoded inline.
+   Start: [2, 2]   Goal: [37, 37]
+
+   build_sampler(): loads carmaze config + carmaze_step_40000.pt checkpoint,
+   constructs DiffusionSampler identical to the original run_scenarios.py.
+
+   Per-trial output: PASS/FAIL, runtime, iteration count, node count, path length.
+   End-of-run summary: pass rate, avg time, avg iterations, avg nodes,
+   avg path length (successful trials only).
+
+
+Key Design Decisions
+--------------------
+- utils.py holds all shared numba functions: two collision checkers plus the
+  five planning utilities (distance, validity, sampling). car.py imports them.
+- The gym interface is gone. Physics propagation calls agent.get_next_state()
+  directly; collision checking calls BicycleCar.is_state_valid() directly.
+- create_local_map_from_env() makes the global binary grid unnecessary.
+  The diffusion model still receives the same (N,N) float32 format it was
+  trained on — only the source of that grid changed.
+- Coordinate system follows MAPF convention: origin at bottom-left,
+  x in [0, length], y in [0, breadth]. No centred-coordinate shift needed.
