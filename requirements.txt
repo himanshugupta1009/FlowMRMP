@@ -1,0 +1,5 @@
+# FlowMRMP root requirements.
+# Use python -m pip so pyenv selects the flow_mrmp virtualenv pip.
+
+-r ditree/requirements.txt
+-r mrmp_with_kite_extend/requirements.txt
