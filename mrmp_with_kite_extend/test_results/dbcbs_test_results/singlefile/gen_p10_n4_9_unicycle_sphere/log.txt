@@ -1,0 +1,80 @@
+Running with seed: 8534427
+Agent Order: [1, 0, 3, 2]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 8534428
+Agent Order: [0, 2, 1, 3]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 8534429
+Agent Order: [0, 1, 3, 2]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 8534430
+Agent Order: [0, 3, 1, 2]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 8534431
+Agent Order: [3, 2, 1, 0]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 8534432
+Agent Order: [1, 2, 3, 0]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 8534433
+Agent Order: [0, 1, 2, 3]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 8534434
+Agent Order: [1, 3, 2, 0]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 8534435
+Agent Order: [1, 0, 3, 2]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 8534436
+Agent Order: [1, 3, 2, 0]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT

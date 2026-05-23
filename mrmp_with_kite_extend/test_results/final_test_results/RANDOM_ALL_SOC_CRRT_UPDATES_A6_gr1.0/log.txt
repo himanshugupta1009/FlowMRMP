@@ -1,0 +1,576 @@
+Running with seed: 605
+Created env with 25 obstacles covering 0.11232166865934655 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 2 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 606
+Created env with 21 obstacles covering 0.11263374566360591 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 607
+Created env with 20 obstacles covering 0.11015457631701146 of the env.
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 608
+Created env with 25 obstacles covering 0.10549469750990963 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 609
+Created env with 24 obstacles covering 0.08908875590091528 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 610
+Created env with 24 obstacles covering 0.10922776157084688 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  300.0003283023834
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 611
+Created env with 22 obstacles covering 0.1082910105037277 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 612
+Created env with 21 obstacles covering 0.11151626757292288 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 613
+Created env with 20 obstacles covering 0.11143428044339045 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 614
+Created env with 23 obstacles covering 0.10149608352517671 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  300.000031709671
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 615
+Created env with 19 obstacles covering 0.09267898325469838 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  300.0012254714966
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 616
+Created env with 23 obstacles covering 0.10393944771075654 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 617
+Created env with 18 obstacles covering 0.10661716793272628 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 618
+Created env with 20 obstacles covering 0.09500087499122584 of the env.
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 619
+Created env with 19 obstacles covering 0.09375438775751242 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  300.00012969970703
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 620
+Created env with 21 obstacles covering 0.11037764728351053 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 621
+Created env with 22 obstacles covering 0.1018030211565169 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 622
+Created env with 28 obstacles covering 0.10915347705029678 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 623
+Created env with 23 obstacles covering 0.11651804440885107 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 624
+Created env with 20 obstacles covering 0.09968099922193886 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 625
+Created env with 28 obstacles covering 0.11699758734051936 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 626
+Created env with 20 obstacles covering 0.10125173445720416 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 627
+Created env with 21 obstacles covering 0.0940792154829409 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 4
+Failed to solve the current MRMP problem using pRRT.
+PRRT time overflow: found time of  300.0004515647888
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 628
+Created env with 21 obstacles covering 0.10708354051066245 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 5
+Failed to solve the current MRMP problem using pRRT.
+PRRT time overflow: found time of  300.0004367828369
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 629
+Created env with 26 obstacles covering 0.1134638551439935 of the env.
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 630
+Created env with 21 obstacles covering 0.0994961530940647 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 631
+Created env with 15 obstacles covering 0.08852909793129043 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 632
+Created env with 25 obstacles covering 0.09880662870400256 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 633
+Created env with 18 obstacles covering 0.10035255216680458 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 5 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 634
+Created env with 20 obstacles covering 0.09386203098669815 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 635
+Created env with 17 obstacles covering 0.09253371961449117 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 636
+Created env with 18 obstacles covering 0.11169174404060085 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  300.00096344947815
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 637
+Created env with 22 obstacles covering 0.08946620106879712 of the env.
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 638
+Created env with 24 obstacles covering 0.12030880837317329 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 639
+Created env with 17 obstacles covering 0.09509039999476997 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 640
+Created env with 22 obstacles covering 0.11304804301729351 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 641
+Created env with 16 obstacles covering 0.08652679009670206 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 642
+Created env with 19 obstacles covering 0.10567992836155873 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 643
+Created env with 21 obstacles covering 0.10828904356342248 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  300.000741481781
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 644
+Created env with 24 obstacles covering 0.107605889683401 of the env.
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 645
+Created env with 18 obstacles covering 0.09089983305433005 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 646
+Created env with 23 obstacles covering 0.1099863234476329 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 647
+Created env with 21 obstacles covering 0.1102483304421243 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 648
+Created env with 25 obstacles covering 0.10651847535358114 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 649
+Created env with 26 obstacles covering 0.12123033386798401 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 650
+Created env with 23 obstacles covering 0.09708257760561906 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 4
+Failed to solve the current MRMP problem using pRRT.
+PRRT time overflow: found time of  300.0002145767212
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 651
+Created env with 26 obstacles covering 0.11174486895516403 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 4
+Failed to solve the current MRMP problem using pRRT.
+PRRT time overflow: found time of  300.000492811203
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 652
+Created env with 21 obstacles covering 0.0997806622319898 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 2 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 653
+Created env with 21 obstacles covering 0.09621316810014612 of the env.
+Testing KCBS using RRT
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  300.00138568878174
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 654
+Created env with 13 obstacles covering 0.08533248261051445 of the env.
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles

@@ -1,0 +1,761 @@
+Running with seed: 128836396
+Agent Order: [0, 2, 1, 3]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+MAPF was unsuccessful: Collision free path not found within the given limit of  300.0 seconds!
+KCBS EB time overflow: found time of  303.4327926635742
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 128836397
+Agent Order: [2, 3, 1, 0]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+MAPF was unsuccessful: Collision free path not found within the given limit of  300.0 seconds!
+KCBS EB time overflow: found time of  303.8339653015137
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 128836398
+Agent Order: [2, 1, 3, 0]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+MAPF was unsuccessful: Collision free path not found within the given limit of  300.0 seconds!
+KCBS EB time overflow: found time of  303.2832932472229
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 128836399
+Agent Order: [1, 2, 3, 0]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+MAPF was unsuccessful: Collision free path not found within the given limit of  300.0 seconds!
+KCBS EB time overflow: found time of  302.67532300949097
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 128836400
+Agent Order: [2, 0, 3, 1]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+MAPF was unsuccessful: Collision free path not found within the given limit of  300.0 seconds!
+KCBS EB time overflow: found time of  303.65049052238464
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 128836401
+Agent Order: [2, 0, 1, 3]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+MAPF was unsuccessful: Collision free path not found within the given limit of  300.0 seconds!
+KCBS EB time overflow: found time of  306.9158585071564
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 128836402
+Agent Order: [1, 0, 3, 2]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+MAPF was unsuccessful: Collision free path not found within the given limit of  300.0 seconds!
+KCBS EB time overflow: found time of  304.05981159210205
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 128836403
+Agent Order: [0, 2, 1, 3]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+MAPF was unsuccessful: Collision free path not found within the given limit of  300.0 seconds!
+KCBS EB time overflow: found time of  306.5386085510254
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 128836404
+Agent Order: [3, 2, 1, 0]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+MAPF was unsuccessful: Collision free path not found within the given limit of  300.0 seconds!
+KCBS EB time overflow: found time of  302.8192985057831
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 128836405
+Agent Order: [0, 3, 2, 1]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+MAPF was unsuccessful: Collision free path not found within the given limit of  300.0 seconds!
+KCBS EB time overflow: found time of  302.371463060379
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT

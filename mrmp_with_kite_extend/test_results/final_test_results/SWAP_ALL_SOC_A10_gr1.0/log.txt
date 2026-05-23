@@ -1,0 +1,90 @@
+Running with seed: 1005
+Agent Order: [1, 8, 0, 4, 9, 7, 6, 2, 5, 3]
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.0003929138184
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1006
+Agent Order: [4, 3, 2, 9, 7, 8, 5, 1, 0, 6]
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1007
+Agent Order: [0, 2, 9, 3, 8, 4, 7, 5, 6, 1]
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1008
+Agent Order: [4, 5, 7, 9, 8, 1, 6, 2, 0, 3]
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1009
+Agent Order: [9, 2, 7, 4, 8, 6, 0, 5, 3, 1]
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1010
+Agent Order: [9, 0, 2, 8, 5, 6, 3, 7, 1, 4]
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.0010671615601
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1011
+Agent Order: [2, 5, 1, 9, 4, 0, 3, 6, 8, 7]
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.0018773078918
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1012
+Agent Order: [1, 6, 9, 2, 8, 4, 7, 5, 0, 3]
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.0011093616486
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1013
+Agent Order: [5, 8, 9, 2, 6, 7, 4, 3, 1, 0]
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.0012085437775
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1014
+Agent Order: [4, 0, 1, 7, 2, 5, 9, 6, 3, 8]
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles

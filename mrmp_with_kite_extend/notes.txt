@@ -1,0 +1,81 @@
+***********************************************************************
+Date: 18th May, 2025
+Test files for experiments are:
+#2D
+pipeline_code/test_pipeline_swap.py
+pipeline_code/test_pipeline_narrow_corridor.py
+pipeline_code/test_pipeline_small_cluttered.py
+pipeline_code/test_pipeline_large_cluttered.py
+#3D
+pipeline_code/test_pipeline_swap_3d.py
+pipeline_code/test_pipeline_large_cluttered_3d.py
+
+***********************************************************************
+Date: 6th Nov, 2025
+
+Discussion with Michael Moncton
+1) How to choose prune radius and nearby radius for SST?
+A: A decent heuristic is something like this.
+    i) Find the minimum distance between any two obstacles or 
+    between an obstacle and a boundary wall -> d_min
+    ii) Now, ideally, two witness balls should fit in the distance d_min
+    iii) So, prune_raidus = 0.25*d_min
+    iv) Values bigger than that are bad to get the asymptotic near 
+    optimal solution.
+    v) And nearby_radius = 2*prune_radius  
+
+2) How to use SST when you have time in your state space?
+A: His suggestion is to use his way of doing Ridge based planning.
+    That way figuring out the witness is an O(1) lookup.
+
+
+***********************************************************************
+Date: 1st May, 2025
+
+To-Do:
+    1) Modify the add_node function in cRRT.py and ncRRT.py to be consistent with the rrt.py file
+    (Especially the way new_node_id is computed. I changed it because it caused errors with 
+    rewiring in EdgeBundleRRT based KCBS) X 
+
+***********************************************************************
+Date: 30th Apr, 2025
+
+To-Do:
+    1) Optimize the functions that have comments regarding making them faster.
+    2) Ask SK why he didn't store the entire edge propogation in the edge bundle. 
+        2.a) Why only the final position and not the entie path?
+    3) Put comments in whatever new function has been written. 
+    4) Generate random environments in test_pipeline.py for non PyBullet experiments.
+    5) Add code to visualize KCBS paths (both RRT and EBRRT). X
+    6) Compare RRT and EB-RRT for single agent in Unicycle Env, PyBullet Env with DDR and 
+    PyBullet Env with some other dynamics function.
+       
+
+***********************************************************************
+Date: 3rd Dec, 2024
+
+To-Do: (Himanshu)
+    1) Reverse the paths while returning (done)
+    2) Add num_steps in get_next_state or dt as a parameter somewhere in RRT (done)
+    3) Write a a function to get the higher resolution path (done)
+    4) Write a function to check for collision between two higher resolution paths 
+    5) Write a function to find the first path for all agents (done)
+    6) Learn how to use line_profiler for profiling your code
+
+To-Do: (Paul)
+    1) Fix the visualization code now that the path is reversed
+
+
+***********************************************************************
+Date: 1st Dec, 2024
+
+To-Do: 
+    1) Make visualizations prettier.
+
+Q: 
+    1) Why does CircularObstacle2DTimed in Environments.py exist?
+    2) What's the best way to add a timed obstacle?
+
+***********************************************************************
+
+
