@@ -1,0 +1,173 @@
+Num agents: 6
+
+KCBS using RRT With Type 2 Edge Bundles:
+	Total rounds completed: 100
+	Percent Success: 1.0
+	Average Total Cost: 163.01857023087487
+	STD Total Cost: 25.542411807714174
+	SEM Total Cost: 2.5542411807714176
+	Average Time: 0.17077849864959715
+	STD Time: 0.12942680880333107
+	SEM Time: 0.012942680880333107
+	Average Avg. Path Time: 63.023500000000006
+	STD Avg. Path Time: 11.361400454442016
+	SEM Avg. Path Time: 1.1361400454442017
+	Average Max Path Time: 92.39599999999999
+	STD Max Path Time: 20.838638936535002
+	SEM Max Path Time: 2.0838638936535
+	Max Planning Time: 300.0
+Exceptions:
+
+
+KCBS using RRT:
+	Total rounds completed: 100
+	Percent Success: 1.0
+	Average Total Cost: 215.0150721884727
+	STD Total Cost: 30.63326394984488
+	SEM Total Cost: 3.063326394984488
+	Average Time: 0.8268224716186523
+	STD Time: 0.5824916024979773
+	SEM Time: 0.058249160249797725
+	Average Avg. Path Time: 143.37783333333334
+	STD Avg. Path Time: 22.201998253739117
+	SEM Avg. Path Time: 2.2201998253739115
+	Average Max Path Time: 204.96299999999997
+	STD Max Path Time: 35.47046475163484
+	SEM Max Path Time: 3.5470464751634845
+	Max Planning Time: 300.0
+Exceptions:
+
+
+KCBS using RRT With kino-TI Edge Bundles:
+	Total rounds completed: 100
+	Percent Success: 1.0
+	Average Total Cost: 165.26738922533653
+	STD Total Cost: 25.98231658713445
+	SEM Total Cost: 2.598231658713445
+	Average Time: 0.24569233894348144
+	STD Time: 0.16264852624768347
+	SEM Time: 0.016264852624768348
+	Average Avg. Path Time: 62.1055
+	STD Avg. Path Time: 10.725653937404504
+	SEM Avg. Path Time: 1.0725653937404505
+	Average Max Path Time: 89.088
+	STD Max Path Time: 18.929647955447344
+	SEM Max Path Time: 1.8929647955447344
+	Max Planning Time: 300.0
+Exceptions:
+
+
+PRRT With Edge Bundles:
+	Total rounds completed: 100
+	Percent Success: 0.98
+	Average Total Cost: 174.69236312285165
+	STD Total Cost: 31.92572904457366
+	SEM Total Cost: 3.2249856431060504
+	Average Time: 0.3188660534060731
+	STD Time: 42.205847868343504
+	SEM Time: 4.22058478683435
+	Average Avg. Path Time: 65.81955782312924
+	STD Avg. Path Time: 12.77610303855285
+	SEM Avg. Path Time: 1.2905812993855394
+	Average Max Path Time: 99.97244897959183
+	STD Max Path Time: 25.89835317222801
+	SEM Max Path Time: 2.616128735663794
+	Max Planning Time: 300.0
+Exceptions:
+
+
+PRRT:
+	Total rounds completed: 100
+	Percent Success: 0.97
+	Average Total Cost: 226.33890932852194
+	STD Total Cost: 35.14675617201456
+	SEM Total Cost: 3.5686124096141345
+	Average Time: 0.5364091470069492
+	STD Time: 51.34431566569048
+	SEM Time: 5.134431566569048
+	Average Avg. Path Time: 146.3189003436426
+	STD Avg. Path Time: 23.905404775528552
+	SEM Avg. Path Time: 2.4272261064799823
+	Average Max Path Time: 213.90515463917524
+	STD Max Path Time: 42.193952892007175
+	SEM Max Path Time: 4.284146826072806
+	Max Planning Time: 300.0
+Exceptions:
+
+
+Prioritized RRT with Kino-TI edge bundles:
+	Total rounds completed: 100
+	Percent Success: 0.99
+	Average Total Cost: 173.24954118135165
+	STD Total Cost: 29.786449369591416
+	SEM Total Cost: 2.993650799874329
+	Average Time: 0.2082588817134048
+	STD Time: 29.979833429710915
+	SEM Time: 2.9979833429710916
+	Average Avg. Path Time: 63.57205387205387
+	STD Avg. Path Time: 11.251110257203237
+	SEM Avg. Path Time: 1.1307791272140053
+	Average Max Path Time: 93.24545454545454
+	STD Max Path Time: 18.60215739478246
+	SEM Max Path Time: 1.8695871627160159
+	Max Planning Time: 300.0
+Exceptions:
+
+
+CRRT with Type 2 Edge Bundles:
+	Total rounds completed: 100
+	Percent Success: 1.0
+	Average Total Cost: 372.2878152598541
+	STD Total Cost: 68.53425560435875
+	SEM Total Cost: 6.853425560435875
+	Average Time: 0.9384267592430114
+	STD Time: 0.5341981587911243
+	SEM Time: 0.05341981587911243
+	Average Avg. Path Time: 168.36700000000002
+	STD Avg. Path Time: 37.005336920585655
+	SEM Avg. Path Time: 3.7005336920585656
+	Average Max Path Time: 168.36700000000002
+	STD Max Path Time: 37.005336920585655
+	SEM Max Path Time: 3.7005336920585656
+	Max Planning Time: 300.0
+Exceptions:
+
+
+CRRT:
+	Total rounds completed: 100
+	Percent Success: 1.0
+	Average Total Cost: 732.2417876432
+	STD Total Cost: 123.49411539466212
+	SEM Total Cost: 12.349411539466212
+	Average Time: 17.46989001274109
+	STD Time: 9.763154985618705
+	SEM Time: 0.9763154985618705
+	Average Avg. Path Time: 489.66
+	STD Avg. Path Time: 83.55597168389825
+	SEM Avg. Path Time: 8.355597168389824
+	Average Max Path Time: 489.66
+	STD Max Path Time: 83.55597168389825
+	SEM Max Path Time: 8.355597168389824
+	Max Planning Time: 300.0
+Exceptions:
+
+
+CRRT with Kino-TI Edge Bundles:
+	Total rounds completed: 100
+	Percent Success: 1.0
+	Average Total Cost: 326.1740977905866
+	STD Total Cost: 57.21084382415149
+	SEM Total Cost: 5.721084382415149
+	Average Time: 1.5729730200767518
+	STD Time: 0.757742465760248
+	SEM Time: 0.0757742465760248
+	Average Avg. Path Time: 158.07500000000005
+	STD Avg. Path Time: 30.851519206900292
+	SEM Avg. Path Time: 3.0851519206900293
+	Average Max Path Time: 158.07500000000005
+	STD Max Path Time: 30.851519206900292
+	SEM Max Path Time: 3.0851519206900293
+	Max Planning Time: 300.0
+Exceptions:
+
+

@@ -1,0 +1,150 @@
+Running with seed: 1505
+Agent Order: [8, 11, 6, 5, 2, 12, 0, 4, 10, 13, 3, 1, 9, 14, 7]
+Testing KCBS using RRT
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.0018873214722
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1506
+Agent Order: [8, 3, 7, 9, 11, 6, 4, 12, 1, 2, 5, 10, 0, 13, 14]
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.0030369758606
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+CRRT EB time overflow: found time of  600.0000519752502
+Path can't be found because goal hasn't been reached!
+Running with seed: 1507
+Agent Order: [9, 0, 8, 4, 2, 12, 3, 7, 6, 11, 13, 5, 1, 14, 10]
+Testing KCBS using RRT
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.0002498626709
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1508
+Agent Order: [12, 10, 7, 3, 11, 5, 8, 4, 2, 9, 1, 13, 0, 6, 14]
+Testing KCBS using RRT
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.0010762214661
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1509
+Agent Order: [3, 11, 14, 1, 13, 10, 6, 12, 7, 5, 9, 0, 4, 2, 8]
+Testing KCBS using RRT
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 9 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 12 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.0014669895172
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1510
+Agent Order: [5, 7, 11, 4, 6, 3, 14, 13, 10, 8, 12, 9, 1, 0, 2]
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 9 because goal hasn't been reached!
+Path can't be found for agent 10 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 10 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.000078201294
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+CRRT EB time overflow: found time of  600.0006191730499
+Path can't be found because goal hasn't been reached!
+Running with seed: 1511
+Agent Order: [0, 10, 12, 3, 1, 5, 14, 9, 7, 8, 2, 13, 6, 4, 11]
+Testing KCBS using RRT
+Path can't be found for agent 9 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.0020871162415
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1512
+Agent Order: [3, 9, 11, 14, 2, 12, 1, 13, 8, 0, 7, 4, 10, 6, 5]
+Testing KCBS using RRT
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.0003743171692
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1513
+Agent Order: [7, 1, 10, 11, 14, 13, 3, 12, 6, 0, 2, 9, 5, 8, 4]
+Testing KCBS using RRT
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 9 because goal hasn't been reached!
+Path can't be found for agent 9 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.0004272460938
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 1514
+Agent Order: [8, 9, 7, 3, 1, 14, 10, 13, 12, 6, 11, 4, 2, 0, 5]
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 11 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT
+CRRT time overflow: found time of  600.0010378360748
+Path can't be found because goal hasn't been reached!
+Testing CRRT with Kino-TI Edge Bundles

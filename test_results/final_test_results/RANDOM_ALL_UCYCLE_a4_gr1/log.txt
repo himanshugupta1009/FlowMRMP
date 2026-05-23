@@ -1,0 +1,1124 @@
+Running with seed: 400
+Created env with 23 obstacles covering 0.11452907326552672 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 401
+Created env with 18 obstacles covering 0.11921146568503138 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 402
+Created env with 21 obstacles covering 0.13532146466345807 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 403
+Created env with 13 obstacles covering 0.1670768681426509 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 404
+Created env with 17 obstacles covering 0.11839717346786005 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 405
+Created env with 11 obstacles covering 0.15438063484022602 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 406
+Created env with 17 obstacles covering 0.10627706723292056 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 2
+Failed to solve the current MRMP problem using pRRT.
+PRRT time overflow: found time of  300.00056195259094
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 407
+Created env with 10 obstacles covering 0.10865652687264601 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 408
+Created env with 18 obstacles covering 0.07718550728844592 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 409
+Created env with 21 obstacles covering 0.11289536530002481 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 410
+Created env with 18 obstacles covering 0.1424207767920025 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 411
+Created env with 20 obstacles covering 0.14129952394175835 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 412
+Created env with 18 obstacles covering 0.11591004772874339 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 413
+Created env with 16 obstacles covering 0.08656497163278756 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 414
+Created env with 16 obstacles covering 0.07641678306064893 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 415
+Created env with 18 obstacles covering 0.0989454516821988 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 416
+Created env with 15 obstacles covering 0.13499489700368617 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 417
+Created env with 20 obstacles covering 0.12939743996142927 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 418
+Created env with 15 obstacles covering 0.12763309725830707 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 419
+Created env with 19 obstacles covering 0.10256653769261156 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 420
+Created env with 19 obstacles covering 0.1274447077374304 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 421
+Created env with 17 obstacles covering 0.1454649452282073 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 422
+Created env with 15 obstacles covering 0.16023385168634235 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 423
+Created env with 14 obstacles covering 0.1509504446152379 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 424
+Created env with 15 obstacles covering 0.09757316563271833 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 425
+Created env with 19 obstacles covering 0.15180556772826573 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 1
+Failed to solve the current MRMP problem using pRRT.
+EB PRRT time overflow: found time of  300.0003569126129
+Testing PRRT
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 1
+Failed to solve the current MRMP problem using pRRT.
+PRRT time overflow: found time of  300.00057911872864
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 426
+Created env with 17 obstacles covering 0.1861362389669928 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 427
+Created env with 13 obstacles covering 0.08703836197833958 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 428
+Created env with 13 obstacles covering 0.14649886520039426 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 429
+Created env with 19 obstacles covering 0.0964399418205133 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 430
+Created env with 20 obstacles covering 0.10793288507185021 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 431
+Created env with 16 obstacles covering 0.1138697511422752 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 432
+Created env with 15 obstacles covering 0.13653531531304727 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 433
+Created env with 20 obstacles covering 0.09083456147803648 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 434
+Created env with 19 obstacles covering 0.08907307611671916 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 435
+Created env with 14 obstacles covering 0.11335216056006175 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 436
+Created env with 17 obstacles covering 0.14166559596835276 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 2
+Failed to solve the current MRMP problem using pRRT.
+PRRT time overflow: found time of  300.0006983280182
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 437
+Created env with 21 obstacles covering 0.09574988509768348 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 438
+Created env with 15 obstacles covering 0.10086315641635432 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 439
+Created env with 22 obstacles covering 0.12594581231984062 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 440
+Created env with 16 obstacles covering 0.12327289685525694 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 441
+Created env with 22 obstacles covering 0.09243847312409229 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 442
+Created env with 9 obstacles covering 0.1682049647722939 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 443
+Created env with 22 obstacles covering 0.09120853983529635 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 444
+Created env with 11 obstacles covering 0.15415298687649884 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 445
+Created env with 18 obstacles covering 0.11167755009552816 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 3
+Failed to solve the current MRMP problem using pRRT.
+EB PRRT time overflow: found time of  300.000435590744
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 446
+Created env with 16 obstacles covering 0.16219112374450811 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 447
+Created env with 21 obstacles covering 0.101780407766875 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 448
+Created env with 18 obstacles covering 0.1542114870513184 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 449
+Created env with 18 obstacles covering 0.14065428258129994 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 450
+Created env with 19 obstacles covering 0.12955660491293092 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 451
+Created env with 21 obstacles covering 0.10832420866109796 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 452
+Created env with 16 obstacles covering 0.06645065962689763 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 453
+Created env with 16 obstacles covering 0.1028012963438356 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 454
+Created env with 10 obstacles covering 0.16636188396991575 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 455
+Created env with 14 obstacles covering 0.15031257091466102 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 456
+Created env with 17 obstacles covering 0.07795106183283398 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 457
+Created env with 19 obstacles covering 0.15091147299347368 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 458
+Created env with 13 obstacles covering 0.22655916173727017 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 459
+Created env with 14 obstacles covering 0.10644515031919459 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 460
+Created env with 18 obstacles covering 0.12794108838621865 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 461
+Created env with 20 obstacles covering 0.11792152858063965 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 462
+Created env with 26 obstacles covering 0.10335267234152354 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 463
+Created env with 22 obstacles covering 0.10226265389304476 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 464
+Created env with 20 obstacles covering 0.13020936858243098 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 465
+Created env with 20 obstacles covering 0.11024157992784746 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 466
+Created env with 15 obstacles covering 0.10820500333385732 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 467
+Created env with 17 obstacles covering 0.1126325292532572 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 468
+Created env with 16 obstacles covering 0.10732117535011483 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 469
+Created env with 19 obstacles covering 0.12743658743576025 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 470
+Created env with 16 obstacles covering 0.13421974998503577 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 471
+Created env with 14 obstacles covering 0.10631225019487277 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 472
+Created env with 20 obstacles covering 0.07335659628285614 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 473
+Created env with 20 obstacles covering 0.08590690405697575 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 474
+Created env with 20 obstacles covering 0.12682305985864994 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 475
+Created env with 15 obstacles covering 0.15263692488731367 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 476
+Created env with 14 obstacles covering 0.14241261872650332 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 477
+Created env with 19 obstacles covering 0.12282476947624266 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 3
+Failed to solve the current MRMP problem using pRRT.
+EB PRRT time overflow: found time of  300.000257730484
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 478
+Created env with 14 obstacles covering 0.16738043923675291 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 479
+Created env with 12 obstacles covering 0.1190276336474575 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 480
+Created env with 20 obstacles covering 0.08662672026672752 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 481
+Created env with 18 obstacles covering 0.11924498596756321 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 482
+Created env with 23 obstacles covering 0.11274212328471055 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 483
+Created env with 23 obstacles covering 0.09619468750980689 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 484
+Created env with 14 obstacles covering 0.19666484611002544 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 485
+Created env with 22 obstacles covering 0.09612239345999819 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 486
+Created env with 18 obstacles covering 0.12068653245834897 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 487
+Created env with 17 obstacles covering 0.11294434762644637 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 488
+Created env with 14 obstacles covering 0.21107577188105536 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 489
+Created env with 18 obstacles covering 0.09185061927423148 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 490
+Created env with 17 obstacles covering 0.08646826719769683 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 491
+Created env with 20 obstacles covering 0.12390847832749205 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 492
+Created env with 13 obstacles covering 0.16719112513262935 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 493
+Created env with 15 obstacles covering 0.09448185149851847 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 494
+Created env with 15 obstacles covering 0.08427620426209849 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 495
+Created env with 14 obstacles covering 0.1529272687696638 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 496
+Created env with 18 obstacles covering 0.12496012618582375 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 497
+Created env with 12 obstacles covering 0.15677236042541196 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 498
+Created env with 18 obstacles covering 0.1287154331484608 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles
+Running with seed: 499
+Created env with 12 obstacles covering 0.16434354020369377 of the env.
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing KCBS using RRT With kino-TI Edge Bundles
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing Prioritized RRT with Kino-TI edge bundles
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Testing CRRT with Kino-TI Edge Bundles

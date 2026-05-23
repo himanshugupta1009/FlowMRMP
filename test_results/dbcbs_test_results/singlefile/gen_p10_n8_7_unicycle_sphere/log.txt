@@ -1,0 +1,323 @@
+Running with seed: 101713658
+Agent Order: [4, 1, 6, 0, 2, 5, 7, 3]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 2 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 7 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 101713659
+Agent Order: [0, 1, 5, 7, 2, 4, 6, 3]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 101713660
+Agent Order: [0, 1, 7, 3, 5, 4, 2, 6]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 101713661
+Agent Order: [4, 3, 5, 0, 2, 1, 6, 7]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 0 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+MAPF was unsuccessful: Collision free path not found within the given limit of  300.0 seconds!
+KCBS time overflow: found time of  300.0853843688965
+Testing PRRT With Edge Bundles
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 7
+Failed to solve the current MRMP problem using pRRT.
+EB PRRT time overflow: found time of  300.00031328201294
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 101713662
+Agent Order: [5, 1, 2, 4, 7, 0, 3, 6]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+MAPF was unsuccessful: Collision free path not found within the given limit of  300.0 seconds!
+KCBS EB time overflow: found time of  300.0067183971405
+Testing KCBS using RRT
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 101713663
+Agent Order: [7, 5, 3, 0, 6, 4, 1, 2]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 101713664
+Agent Order: [4, 6, 2, 5, 3, 1, 7, 0]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 2 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 101713665
+Agent Order: [4, 2, 1, 7, 5, 6, 0, 3]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 101713666
+Agent Order: [2, 6, 4, 1, 7, 0, 5, 3]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 101713667
+Agent Order: [5, 6, 3, 4, 0, 1, 7, 2]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 3 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+MAPF was unsuccessful: Collision free path not found within the given limit of  300.0 seconds!
+KCBS EB time overflow: found time of  300.3097231388092
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 2 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 5
+Failed to solve the current MRMP problem using pRRT.
+EB PRRT time overflow: found time of  300.0007836818695
+Testing PRRT
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 7
+Failed to solve the current MRMP problem using pRRT.
+PRRT time overflow: found time of  300.0002028942108
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT

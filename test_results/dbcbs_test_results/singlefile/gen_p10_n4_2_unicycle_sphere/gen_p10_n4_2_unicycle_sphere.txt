@@ -1,0 +1,110 @@
+Num agents: 4
+
+KCBS using RRT With Type 2 Edge Bundles:
+	Total rounds completed: 10
+	Percent Success: 1.0
+	Average Total Cost: 42.14559319684133
+	STD Total Cost: 1.4735226563582569
+	SEM Total Cost: 0.4659687777953683
+	Average Time: 0.18583438396453858
+	STD Time: 0.0017232558386134883
+	SEM Time: 0.000544941344120216
+	Average Avg. Path Time: 41.33999999999999
+	STD Avg. Path Time: 2.310880063237091
+	SEM Avg. Path Time: 0.7307644399303145
+	Average Max Path Time: 88.0
+	STD Max Path Time: 0.0
+	SEM Max Path Time: 0.0
+Exceptions:
+
+
+KCBS using RRT:
+	Total rounds completed: 10
+	Percent Success: 1.0
+	Average Total Cost: 38.819252392124966
+	STD Total Cost: 2.646084370714369
+	SEM Total Cost: 0.8367653492430753
+	Average Time: 0.8541182279586792
+	STD Time: 0.40297618616018654
+	SEM Time: 0.12743225910742118
+	Average Avg. Path Time: 50.462500000000006
+	STD Avg. Path Time: 10.082370821829995
+	SEM Avg. Path Time: 3.1883256011406496
+	Average Max Path Time: 73.1
+	STD Max Path Time: 14.776407622362827
+	SEM Max Path Time: 4.672710372173972
+Exceptions:
+
+
+PRRT With Edge Bundles:
+	Total rounds completed: 10
+	Percent Success: 1.0
+	Average Total Cost: 37.596165225278085
+	STD Total Cost: 8.391984495363968
+	SEM Total Cost: 2.653778509416888
+	Average Time: 11.856608891487122
+	STD Time: 37.40958033585782
+	SEM Time: 11.829948017235747
+	Average Avg. Path Time: 27.322499999999998
+	STD Avg. Path Time: 6.42618828181476
+	SEM Avg. Path Time: 2.0321391643618636
+	Average Max Path Time: 43.26
+	STD Max Path Time: 9.62637580354679
+	SEM Max Path Time: 3.044127315194144
+Exceptions:
+
+
+PRRT:
+	Total rounds completed: 10
+	Percent Success: 0.9
+	Average Total Cost: 47.19431463653861
+	STD Total Cost: 4.777931441385231
+	SEM Total Cost: 1.5926438137950771
+	Average Time: 0.20183269182840982
+	STD Time: 94.8046355960808
+	SEM Time: 29.97985812258902
+	Average Avg. Path Time: 46.263888888888886
+	STD Avg. Path Time: 4.023021856901987
+	SEM Avg. Path Time: 1.3410072856339956
+	Average Max Path Time: 74.7
+	STD Max Path Time: 8.308730348254178
+	SEM Max Path Time: 2.769576782751393
+Exceptions:
+
+
+CRRT with Type 2 Edge Bundles:
+	Total rounds completed: 10
+	Percent Success: 1.0
+	Average Total Cost: 60.27246323377159
+	STD Total Cost: 10.122556615729176
+	SEM Total Cost: 3.201033464971
+	Average Time: 0.09209222793579101
+	STD Time: 0.03095306815199593
+	SEM Time: 0.009788219593072606
+	Average Avg. Path Time: 59.55
+	STD Avg. Path Time: 15.153895722076076
+	SEM Avg. Path Time: 4.792082590644235
+	Average Max Path Time: 59.55
+	STD Max Path Time: 15.153895722076076
+	SEM Max Path Time: 4.792082590644235
+Exceptions:
+
+
+CRRT:
+	Total rounds completed: 10
+	Percent Success: 1.0
+	Average Total Cost: 93.9837966121346
+	STD Total Cost: 10.7308223184552
+	SEM Total Cost: 3.393383969288713
+	Average Time: 0.5403952598571777
+	STD Time: 0.14143696228412336
+	SEM Time: 0.04472629461531609
+	Average Avg. Path Time: 108.6
+	STD Avg. Path Time: 10.437113266288401
+	SEM Avg. Path Time: 3.3005050118630836
+	Average Max Path Time: 108.6
+	STD Max Path Time: 10.437113266288401
+	SEM Max Path Time: 3.3005050118630836
+Exceptions:
+
+

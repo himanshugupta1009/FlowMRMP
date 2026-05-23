@@ -1,0 +1,204 @@
+Running with seed: 56254477
+Agent Order: [6, 4, 7, 2, 3, 0, 5, 1]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 4
+Failed to solve the current MRMP problem using pRRT.
+EB PRRT time overflow: found time of  300.0008273124695
+Testing PRRT
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 4
+Failed to solve the current MRMP problem using pRRT.
+PRRT time overflow: found time of  300.0004072189331
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 56254478
+Agent Order: [0, 3, 1, 2, 5, 6, 7, 4]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Path can't be found for agent 1 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 56254479
+Agent Order: [1, 6, 7, 5, 0, 3, 2, 4]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 4
+Failed to solve the current MRMP problem using pRRT.
+EB PRRT time overflow: found time of  300.00049591064453
+Testing PRRT
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 5
+Failed to solve the current MRMP problem using pRRT.
+PRRT time overflow: found time of  300.00055503845215
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 56254480
+Agent Order: [4, 0, 6, 7, 2, 3, 1, 5]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 5 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 5
+Failed to solve the current MRMP problem using pRRT.
+EB PRRT time overflow: found time of  300.0005831718445
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 56254481
+Agent Order: [5, 2, 0, 4, 3, 1, 7, 6]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 56254482
+Agent Order: [2, 1, 5, 4, 7, 0, 3, 6]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 6 because goal hasn't been reached!
+Path can't be found for agent 6 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Testing PRRT
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 5
+Failed to solve the current MRMP problem using pRRT.
+PRRT time overflow: found time of  300.00052523612976
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 56254483
+Agent Order: [7, 6, 4, 0, 3, 5, 2, 1]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Path can't be found for agent 4 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 56254484
+Agent Order: [1, 5, 7, 4, 2, 0, 3, 6]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Testing PRRT With Edge Bundles
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 4
+Failed to solve the current MRMP problem using pRRT.
+EB PRRT time overflow: found time of  300.00021505355835
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 56254485
+Agent Order: [3, 5, 4, 7, 2, 0, 1, 6]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Testing KCBS using RRT
+Path can't be found for agent 0 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Testing PRRT
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
+Running with seed: 56254486
+Agent Order: [5, 4, 1, 6, 7, 2, 0, 3]
+Testing KCBS using RRT With Type 2 Edge Bundles
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Testing KCBS using RRT
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 5 because goal hasn't been reached!
+Path can't be found for agent 7 because goal hasn't been reached!
+Testing PRRT With Edge Bundles
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 6
+Failed to solve the current MRMP problem using pRRT.
+EB PRRT time overflow: found time of  300.0004918575287
+Testing PRRT
+Path can't be found because goal hasn't been reached!
+PRRT failed to find a path for agent 6
+Failed to solve the current MRMP problem using pRRT.
+PRRT time overflow: found time of  300.0003502368927
+Testing CRRT with Type 2 Edge Bundles
+Testing CRRT
