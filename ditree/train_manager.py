@@ -6,7 +6,6 @@ import yaml
 
 from train_diffusion_policy import train_by_steps
 from rollout_manager import rollout
-from train_dipper import train_dipper, rollout_dipper
 
 import matplotlib.pyplot as plt
 import minari
@@ -57,7 +56,8 @@ if __name__ == "__main__":
         augmentations=loaded_config.get('augmentations', ["mirror"]),   # ["rotate", "mirror"]
         policy=loaded_config.get('policy', "flow_matching"),    # ["diffusion","flow_matching"]
         num_diffusion_iters=loaded_config.get('num_diffusion_iters', 5),
-        unet_down_dims=unet_dims[loaded_config.get('unet_down_dims', 'large')],
+        initial_rollout=loaded_config.get('initial_rollout', False),
+        unet_down_dims=unet_dims[loaded_config.get('unet_size', loaded_config.get('unet_down_dims', 'large'))],
         pred_horizon=loaded_config.get('pred_horizon', 64),
         action_horizon=loaded_config.get('action_horizon', 8),
     )

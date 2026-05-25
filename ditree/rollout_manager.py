@@ -159,7 +159,7 @@ def rollout(env_id, policy, ema_noise_pred_net, noise_scheduler,
 
     metadata_path = f"metadata/{env_id}.pt"
     if os.path.exists(metadata_path):
-        metadata = torch.load(metadata_path)
+        metadata = torch.load(metadata_path, weights_only=False)
 
         # for v_x, v_y using v range
         # metadata['Observations_min'][2] = metadata['Observations_min'][3]

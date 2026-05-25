@@ -29,6 +29,22 @@ from local_map_encoder import ConditionalUnet1DWithLocalMap, ConditionalUnet1D
 from log_to_tensorboard import log_results
 
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(BASE_DIR)
+
+
+def resolve_path(*parts):
+    return os.path.join(BASE_DIR, *parts)
+
+
+def first_existing_path(*paths):
+    for path in paths:
+        if os.path.exists(path):
+            return path
+    missing = "\n".join(f"  - {path}" for path in paths)
+    raise FileNotFoundError(f"None of these paths exist:\n{missing}")
+
+
 def init_noise_pred_net(
         input_dim,
         action_dim,
@@ -70,9 +86,15 @@ def init_noise_pred_net(
 def get_dataset(env_id):
     if "drone" in env_id.lower():
         if "dronemaze" in env_id.lower():
-            filename = "datasets/drone_episodes.pkl"
+            filename = first_existing_path(
+                resolve_path("datasets", "drone_episodes.pkl"),
+                os.path.join(ROOT_DIR, "data", "drone_episodes.pkl"),
+            )
         elif "droneforest" in env_id.lower():
-            filename = "datasets/drone_forest_episodes.pkl"
+            filename = first_existing_path(
+                resolve_path("datasets", "drone_forest_episodes.pkl"),
+                os.path.join(ROOT_DIR, "data", "drone_forest_episodes.pkl"),
+            )
         else:
             raise ValueError(f"Invalid env_id: {env_id}")
         with open(filename, "rb") as f:
@@ -83,11 +105,16 @@ def get_dataset(env_id):
             return sample['actions']
 
     elif "car" in env_id.lower():
-        filename = "datasets/car_episodes_small.pkl"
+        filename = first_existing_path(
+            resolve_path("datasets", "car_episodes_small.pkl"),
+            resolve_path("datasets", "car_episodes.pkl"),
+            os.path.join(ROOT_DIR, "data", "car_episodes_small.pkl"),
+            os.path.join(ROOT_DIR, "data", "car_episodes.pkl"),
+        )
         with open(filename, "rb") as f:
             dataset = pickle.load(f)
         def get_obs(sample):
-            return sample['observation']
+            return sample['observations']
         def get_act(sample):
             return sample['actions']
 
@@ -106,9 +133,9 @@ def get_dataset(env_id):
             return sample.actions
 
     # if metadata/env_id exists load, otherwise create and save
-    metadata_path = f"metadata/{env_id}.pt"
+    metadata_path = resolve_path("metadata", f"{env_id}.pt")
     if os.path.exists(metadata_path):
-        metadata = torch.load(metadata_path)
+        metadata = torch.load(metadata_path, weights_only=False)
 
         # for v_x, v_y using v range
         # metadata['Observations_min'][2] = metadata['Observations_min'][3]
@@ -154,7 +181,7 @@ def get_dataset(env_id):
             "Actions_min": actions_min,
             "Actions_max": actions_max,
         }
-        os.makedirs("metadata", exist_ok=True)
+        os.makedirs(resolve_path("metadata"), exist_ok=True)
         torch.save(metadata, metadata_path)
 
     return dataset, metadata
@@ -172,6 +199,7 @@ def train_by_steps(
         experiment_name=f"diffusion_planning_{datetime.now().strftime('%d_%m_%H_%M')}",
         env_id="pointmaze-medium-v2",  # ["antmaze-large-diverse-v1", "pointmaze-medium-v2"]
         rollouts=True,
+        initial_rollout=False,
         prediction_type='observations',
         obs_history=1,  # number of observations to use per sample
         action_history=1,  # number of past actions to use per sample
@@ -248,6 +276,8 @@ def train_by_steps(
     else:
         raise ValueError(f"Invalid env_id: {env_id}")
 
+    if not os.path.isabs(output_dir):
+        output_dir = os.path.join(ROOT_DIR, output_dir)
     os.makedirs(output_dir, exist_ok=True)
     dataset, metadata = get_dataset(env_id)
 
@@ -257,7 +287,7 @@ def train_by_steps(
         size = 32
         if "pointmaze" in env_id:
             dataset, _ = minari.split_dataset(dataset, sizes=[size, size], seed=seed)
-        elif "drone" in env_id:
+        elif "drone" in env_id or "car" in env_id:
             dataset = dataset[:size]
 
 
@@ -266,7 +296,11 @@ def train_by_steps(
         global_map = np.float32(dataset.env_spec.kwargs['maze_map']) if local_map_conditioned else None
 
     else:
-        global_map = np.genfromtxt('maps/mazes/D4RL_large.csv', delimiter=',',
+        map_path = first_existing_path(
+            resolve_path("maps", "mazes", "D4RL_large.csv"),
+            resolve_path("maps", "mazes", "random_large.csv"),
+        )
+        global_map = np.genfromtxt(map_path, delimiter=',',
                                    dtype=np.float32) if local_map_conditioned else None
 
     train_dataset = MazeDataset(dataset, metadata,env_id, obs_history=obs_history, action_history=action_history,
@@ -276,15 +310,12 @@ def train_by_steps(
                                    global_map=global_map, s_global=s_global, map_center=map_center,
                                    augmentations=augmentations)
 
-    persistent_workers = True
+    persistent_workers = num_workers > 0
     predict_delta = True
     if debug:
         num_workers = 0
         persistent_workers = False
         max_rollout_steps = 10
-        import matplotlib.pyplot as plt
-        import matplotlib as mpl
-        mpl.use('TkAgg')  # 'Qt5Agg/'TkAgg'
 
     train_dataloader = torch.utils.data.DataLoader(
         train_dataset,
@@ -351,34 +382,38 @@ def train_by_steps(
         loss = checkpoint['loss']
         print(f"Loaded checkpoint from epoch {checkpoint['epoch']} with loss {loss}")
 
-    results_per_scenario, frames = rollout(
-        env_id,
-        policy,
-        noise_pred_net,
-        noise_scheduler,
-        max_episode_steps=max_rollout_steps,
-        num_diffusion_iters=num_diffusion_iters,
-        prediction_type=prediction_type,
-        obs_history=obs_history,
-        action_history=action_history,
-        position_conditioned=position_conditioned,
-        goal_conditioned=goal_conditioned,
-        local_map_size=local_map_size,
-        scale=local_map_scale,
-        pred_horizon=pred_horizon,
-        action_horizon=action_horizon,
-    )
-    if frames:
-        clip = ImageSequenceClip(frames, fps=10)
-        os.makedirs("video", exist_ok=True)
-        clip.write_videofile(f'video/{experiment_name}_epoch_{start_epoch}.mp4')
-
     if not debug:
-        writer = SummaryWriter(log_dir=f"runs/{experiment_name}")
-        log_results(writer, results_per_scenario, start_epoch - 1,
-                    experiment_name, env_id,s_global)
+        writer = SummaryWriter(log_dir=os.path.join(ROOT_DIR, "runs", experiment_name))
     else:
         writer = None
+
+    if initial_rollout:
+        results_per_scenario, frames = rollout(
+            env_id,
+            policy,
+            noise_pred_net,
+            noise_scheduler,
+            max_episode_steps=max_rollout_steps,
+            num_diffusion_iters=num_diffusion_iters,
+            prediction_type=prediction_type,
+            obs_history=obs_history,
+            action_history=action_history,
+            position_conditioned=position_conditioned,
+            goal_conditioned=goal_conditioned,
+            local_map_size=local_map_size,
+            scale=local_map_scale,
+            pred_horizon=pred_horizon,
+            action_horizon=action_horizon,
+        )
+        if frames:
+            clip = ImageSequenceClip(frames, fps=10)
+            video_dir = os.path.join(ROOT_DIR, "video")
+            os.makedirs(video_dir, exist_ok=True)
+            clip.write_videofile(os.path.join(video_dir, f"{experiment_name}_epoch_{start_epoch}.mp4"))
+
+        if writer is not None:
+            log_results(writer, results_per_scenario, start_epoch - 1,
+                        experiment_name, env_id, s_global)
 
     step = 0
     for epoch in range(start_epoch, num_epochs + 1):  # [1,num_epochs]
@@ -476,7 +511,7 @@ def train_by_steps(
                     torch.save(checkpoint, f"{output_dir}/{experiment_name}_epoch_{epoch}_step_{step}.pt")
 
                 # rollout test
-                if rollouts and ((step % rollout_every == 0 and step > 0) or debug):
+                if rollouts and step % rollout_every == 0 and step > 0:
                     try:
                         results_per_scenario, frames = rollout(
                             env_id,
@@ -512,10 +547,20 @@ def train_by_steps(
         if not debug:
             writer.add_scalar('Loss/train', np.mean(epoch_loss), epoch)
 
-    # Weights of the EMA model
-    # is used for inference
+    # Weights of the EMA model are used for inference.
     ema_noise_pred_net = noise_pred_net
     ema.copy_to(ema_noise_pred_net.parameters())
+
+    final_checkpoint = {
+        'epoch': num_epochs,
+        'noise_pred_net_state_dict': ema_noise_pred_net.state_dict(),
+        'ema_state_dict': ema.state_dict(),
+        'optimizer_state_dict': optimizer.state_dict(),
+        'loss': epoch_loss[-1] if epoch_loss else None,
+    }
+    torch.save(final_checkpoint, os.path.join(output_dir, f"{experiment_name}_final.pt"))
+    if writer is not None:
+        writer.close()
 
     print("Done")
 
