@@ -13,3 +13,5 @@ checkpoints/
 common/__pycache__/
 data/
 path_outputs/
+logs/
+runs/
