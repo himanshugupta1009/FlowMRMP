@@ -51,6 +51,7 @@ class TrainConfig:
     sample_steps: int
     consistency_loss_weight: float
     consistency_rollout_steps: int
+    consistency_t_min: float
     debug: bool
     max_train_batches: int | None
     max_val_batches: int | None
@@ -186,14 +187,24 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--consistency-loss-weight",
         type=float,
-        default=0.01,
-        help="Weight for bounded differentiable SOC rollout consistency on the estimated clean edge.",
+        default=0.0,
+        help=(
+            "Experimental weight for bounded differentiable SOC rollout consistency. "
+            "Disabled by default because stored edge endpoints come from nearby bundle starts, "
+            "not exact query-condition repropagation."
+        ),
     )
     parser.add_argument(
         "--consistency-rollout-steps",
         type=int,
         default=20,
         help="Fixed RK4 substeps for the differentiable consistency rollout.",
+    )
+    parser.add_argument(
+        "--consistency-t-min",
+        type=float,
+        default=0.7,
+        help="Only apply rollout consistency when sampled flow time t is at least this value.",
     )
     parser.add_argument("--debug", action="store_true", help="Run a tiny CPU-friendly training smoke test.")
     parser.add_argument("--max-train-batches", type=int, default=None)
@@ -331,6 +342,7 @@ def flow_matching_loss(
     metadata: dict | None = None,
     consistency_loss_weight: float = 0.0,
     consistency_rollout_steps: int = 20,
+    consistency_t_min: float = 0.7,
 ) -> tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
     noise = torch.randn_like(edges)
     t = torch.rand(edges.shape[0], device=edges.device, dtype=edges.dtype)
@@ -342,13 +354,15 @@ def flow_matching_loss(
 
     consistency_loss = torch.zeros((), device=edges.device, dtype=edges.dtype)
     if metadata is not None and consistency_loss_weight > 0.0:
-        clean_edges_estimate = noisy_edges + (1.0 - t_view) * pred_velocity
-        consistency_loss = rollout_consistency_loss(
-            clean_edges_estimate,
-            cond,
-            metadata,
-            consistency_rollout_steps,
-        )
+        consistency_mask = t >= consistency_t_min
+        if bool(consistency_mask.any()):
+            clean_edges_estimate = noisy_edges + (1.0 - t_view) * pred_velocity
+            consistency_loss = rollout_consistency_loss(
+                clean_edges_estimate[consistency_mask],
+                cond[consistency_mask],
+                metadata,
+                consistency_rollout_steps,
+            )
 
     total_loss = fm_loss + consistency_loss_weight * consistency_loss
     return total_loss, fm_loss.detach(), consistency_loss.detach()
@@ -362,6 +376,7 @@ def evaluate(
     metadata: dict,
     consistency_loss_weight: float,
     consistency_rollout_steps: int,
+    consistency_t_min: float,
     max_batches: int | None = None,
 ) -> tuple[float, float, float]:
     model.eval()
@@ -381,6 +396,7 @@ def evaluate(
             metadata,
             consistency_loss_weight,
             consistency_rollout_steps,
+            consistency_t_min,
         )
         total_loss += float(loss.item())
         total_fm_loss += float(fm_loss.item())
@@ -500,6 +516,7 @@ def train_one_epoch(
     metadata: dict,
     consistency_loss_weight: float,
     consistency_rollout_steps: int,
+    consistency_t_min: float,
     max_batches: int | None = None,
 ) -> tuple[float, float, float]:
     model.train()
@@ -522,6 +539,7 @@ def train_one_epoch(
             metadata,
             consistency_loss_weight,
             consistency_rollout_steps,
+            consistency_t_min,
         )
         loss.backward()
         if grad_clip > 0:
@@ -582,6 +600,7 @@ def main() -> None:
         sample_steps=args.sample_steps,
         consistency_loss_weight=args.consistency_loss_weight,
         consistency_rollout_steps=args.consistency_rollout_steps,
+        consistency_t_min=args.consistency_t_min,
         debug=args.debug,
         max_train_batches=args.max_train_batches,
         max_val_batches=args.max_val_batches,
@@ -658,6 +677,7 @@ def main() -> None:
             metadata,
             config.consistency_loss_weight,
             config.consistency_rollout_steps,
+            config.consistency_t_min,
             max_batches=config.max_train_batches,
         )
         val_loss, val_fm_loss, val_consistency_loss = evaluate(
@@ -667,6 +687,7 @@ def main() -> None:
             metadata,
             config.consistency_loss_weight,
             config.consistency_rollout_steps,
+            config.consistency_t_min,
             max_batches=config.max_val_batches,
         )
         print(
