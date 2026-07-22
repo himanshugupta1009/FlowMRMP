@@ -128,6 +128,8 @@ class RRT:
         self.print_logs = print_logs
         self.last_added_node_id = -1
         self.threshold = 3.0
+        self.last_plan_wall_time = 0.0
+        self.last_plan_iterations = 0
 
         # Preprocess the static obstacles for fast collision checking
         # This is done only once at the start of the RRT planning
@@ -142,7 +144,12 @@ class RRT:
         else:
             self.distance_metric_state_size = 2
 
-        if self.distance_metric_state_size == 2:
+        if getattr(self.agent, "disable_dynamic_collision_check", False):
+            # Single-arm planning in an empty world has no moving agents to
+            # check after reaching the goal.  Static/self collision is still
+            # checked by isvalid_function at every rollout waypoint.
+            self.dynamic_col_checker_to_end = lambda *args, **kwargs: False
+        elif self.distance_metric_state_size == 2:
             self.dynamic_col_checker_to_end = check_dynamic_collisions_to_end
         elif self.distance_metric_state_size == 3:
             self.dynamic_col_checker_to_end = check_dynamic_collisions_to_end_3d
@@ -158,6 +165,14 @@ class RRT:
 
         #Class for RRT tree nodes 
         self.node_class = TreeNode
+
+    def _distance_metric_state(self, state):
+        """Return the agent-specific vector used by nearest-neighbor queries."""
+        if hasattr(self.agent, "get_distance_metric_state"):
+            return np.asarray(
+                self.agent.get_distance_metric_state(state), dtype=np.float64
+            )
+        return np.asarray(state[:self.distance_metric_state_size], dtype=np.float64)
 
     def get_random_time(self):
         return round(self.rng.uniform(self.minimum_time_step, self.max_sample_T), self.roundoff_digits)
@@ -207,8 +222,10 @@ class RRT:
         self.tree.add_node(new_node_id, value=new_node)
         self.last_added_node_id = new_node_id
 
-        # Only store the relevant position dimensions (e.g., x, y)
-        self._node_matrix.append(state[:self.distance_metric_state_size], new_node_id)
+        # Store the agent's distance representation.  For the original planar
+        # agents this remains the leading x/y(/z) dimensions; articulated
+        # agents can provide a normalized full-state representation.
+        self._node_matrix.append(self._distance_metric_state(state), new_node_id)
 
         return new_node_id
      
@@ -230,7 +247,8 @@ class RRT:
         num_entries = self._node_matrix.count
         #Each entry in states is of size self.distance_metric_state_size
         #which by construction should be the same as the size of random_point
-        nearest_index = get_nearest_index(states, num_entries, random_point)
+        metric_point = self._distance_metric_state(random_point)
+        nearest_index = get_nearest_index(states, num_entries, metric_point)
         # nearest_index = get_active_nearest_index(states, active, num_entries, random_point)
         nearest_node_id = self._node_matrix.ids[nearest_index]
         nearest_node = self.tree.nodes[nearest_node_id]['value']
@@ -374,8 +392,12 @@ class RRT:
                 continue
 
             # Score: distance to the sampled point (classic RRT heuristic)
-            score = euclidean_distance_numba_with_l(new_state,random_point,
-                                        self.distance_metric_state_size)
+            if hasattr(self.agent, "get_distance"):
+                score = self.agent.get_distance(new_state, random_point)
+            else:
+                score = euclidean_distance_numba_with_l(
+                    new_state, random_point, self.distance_metric_state_size
+                )
 
             if score < best_score:
                 best_score = score
@@ -576,26 +598,26 @@ class RRT:
             "hasn't been reached!".format(self.agent.id))
             return np.empty((0,self.agent.state_length),dtype=np.float64)
         else:
-            total_path_time = self.path_time
-            min_time_step = self.minimum_time_step
-            path_length = int( round(total_path_time/min_time_step,self.roundoff_digits)) + 1
-            path_states = np.empty((path_length,self.agent.state_length), dtype=np.float64)
-
             node_id = self.goal_node_id
-            curr_index = path_length - 1
-
-            while node_id != 0: # Repeat until you have reached the start node
-                # print("Node ID: ", node_id)
-                rrt_node = self.tree.nodes[node_id]['value']
-                path_to_node = rrt_node.path_from_parent
-                len_path_to_node = len(path_to_node)
-                start_index = curr_index - len_path_to_node + 1
-                path_states[start_index:curr_index+1] = path_to_node
-                curr_index -= len_path_to_node
-                node_id = rrt_node.parent_id
-
-            # Fill the remaining states with the start state
-            path_states[:curr_index+1] = self.start
+            reverse_node_ids = []
+            while node_id != 0:
+                reverse_node_ids.append(node_id)
+                node_id = self.tree.nodes[node_id]['value'].parent_id
+            node_ids = reverse_node_ids[::-1]
+            path_length = 1 + sum(
+                len(self.tree.nodes[current_id]['value'].path_from_parent)
+                for current_id in node_ids
+            )
+            path_states = np.empty(
+                (path_length, self.agent.state_length), dtype=np.float64
+            )
+            path_states[0] = self.start
+            cursor = 1
+            for current_id in node_ids:
+                path_to_node = self.tree.nodes[current_id]['value'].path_from_parent
+                next_cursor = cursor + len(path_to_node)
+                path_states[cursor:next_cursor] = path_to_node
+                cursor = next_cursor
             return path_states
 
     def plan_path(self):
@@ -629,6 +651,8 @@ class RRT:
 
         end_time = time.time()
         total_time = end_time - start_time
+        self.last_plan_wall_time = total_time
+        self.last_plan_iterations = curr_num_steps
         self.path_time = round(self.path_time, self.roundoff_digits)
 
         if self.print_logs or self.debug_flag:
@@ -672,6 +696,8 @@ class RRT:
 
         end_time = time.time()
         total_time = end_time - start_time
+        self.last_plan_wall_time = total_time
+        self.last_plan_iterations = curr_num_steps
         self.path_time = round(self.path_time, self.roundoff_digits)
 
         if self.print_logs or self.debug_flag:

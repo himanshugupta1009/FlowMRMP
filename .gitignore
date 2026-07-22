@@ -1,4 +1,5 @@
 .codex
+.DS_Store
 .python-version
 
 tree_plot/
