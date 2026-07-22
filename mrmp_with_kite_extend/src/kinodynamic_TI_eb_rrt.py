@@ -214,11 +214,26 @@ class KinoTIEBRRT(RRT):
 
         action = self.agent.get_random_action(self.rng)
         timestep = self.get_time()
-        num_record_steps = round(timestep / self.minimum_time_step)
+        num_record_steps = max(1, round(timestep / self.minimum_time_step))
 
         # Propagate dynamics
         new_state, path_to_new_state = self.agent.get_next_state(parent_node.state,
                                 action, timestep, num_steps=num_record_steps)
+        step_time = float(timestep) / len(path_to_new_state)
+        goal_index = next(
+            (
+                index
+                for index, state in enumerate(path_to_new_state)
+                if self.reached_goal(
+                    state, self.goal, self.goal_radius, self.agent
+                )[0]
+            ),
+            None,
+        )
+        if goal_index is not None:
+            path_to_new_state = path_to_new_state[: goal_index + 1]
+            timestep = float((goal_index + 1) * step_time)
+            new_state = path_to_new_state[-1]
 
         # Collision check
         accept_new_node = self.isvalid(path_to_new_state, self.agent.radius, self.env.size,
@@ -227,7 +242,7 @@ class KinoTIEBRRT(RRT):
                         self.agent.dynamic_limit_values, self.env.obstacle_buffer,
                         self.dynamic_agent_clearance,
                         self.env.boundary_buffer, parent_node.time_elapsed,
-                        timestep, self.minimum_time_step)
+                        timestep, step_time)
 
         if not accept_new_node:
             if self.debug_flag:
@@ -236,7 +251,7 @@ class KinoTIEBRRT(RRT):
             return False
 
         # Check goal at the final state
-        reached_goal_flag, goal_distance = self.reached_goal(new_state, self.goal,
+        reached_goal_flag, _ = self.reached_goal(new_state, self.goal,
                             self.goal_radius, self.agent)
 
         if reached_goal_flag:
@@ -267,44 +282,8 @@ class KinoTIEBRRT(RRT):
 
                 return True
 
-        # Check if we hit the goal along the path
-        if not reached_goal_flag and goal_distance < self.threshold:
-            total_elapsed_time = parent_node.time_elapsed
-            for index, intermediate_state in enumerate(path_to_new_state):
-                total_elapsed_time += self.minimum_time_step
-                goal_flag, d = self.reached_goal(intermediate_state, self.goal,
-                            self.goal_radius, self.agent)
-                if goal_flag:
-                    if self.dynamic_col_checker_to_end(intermediate_state, self.agent.radius,
-                                        self.dynamic_agent_obstacles,
-                                        self.dynamic_agent_clearance,
-                                        total_elapsed_time,
-                                        self.minimum_time_step):
-                        if self.debug_flag:
-                            print(f"{debug_prefix}Intermediate goal state will collide with high-priority agent. Trying again!")
-                        continue
-                    modified_edge_time = total_elapsed_time - parent_node.time_elapsed
-                    new_path_to_new_state = path_to_new_state[:index + 1]
-
-                    edge_cost = self.cost(self.env,self.agent,parent_node.state,
-                                action,modified_edge_time,new_path_to_new_state)
-                    total_cost = parent_node.cost_so_far + edge_cost
-
-                    new_node_id = self.add_rrt_node(intermediate_state,
-                        parent_node_id,action,modified_edge_time,
-                        new_path_to_new_state,total_elapsed_time,total_cost)
-
-                    self.path_found = True
-                    self.goal_node_id = new_node_id
-                    self.path_cost = total_cost
-                    self.path_time = total_elapsed_time
-
-                    if self.debug_flag:
-                        print(f"{debug_prefix}Goal Reached! Path found for ", self.agent.id)
-
-                    return True
-
-        # Otherwise: valid node, no goal -> add full random-control edge
+        # Otherwise: valid transit node, or a reached state that cannot be
+        # parked safely because of a dynamic obstacle.
         edge_cost = self.cost(self.env, self.agent, parent_node.state,
                         action, timestep, path_to_new_state)
         total_cost = parent_node.cost_so_far + edge_cost

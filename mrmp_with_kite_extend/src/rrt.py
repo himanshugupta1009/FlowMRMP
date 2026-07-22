@@ -175,7 +175,13 @@ class RRT:
         return np.asarray(state[:self.distance_metric_state_size], dtype=np.float64)
 
     def get_random_time(self):
-        return round(self.rng.uniform(self.minimum_time_step, self.max_sample_T), self.roundoff_digits)
+        max_steps = max(
+            1, int(np.floor(self.max_sample_T / self.minimum_time_step + 1e-12))
+        )
+        steps = int(self.rng.integers(1, max_steps + 1))
+        return round(
+            steps * self.minimum_time_step, self.roundoff_digits
+        )
 
     def get_fixed_time(self):
         return self.max_sample_T
@@ -346,7 +352,9 @@ class RRT:
         None
             If all trials are invalid.
         (new_state, path_to_new_state, random_action, random_time)
-            Best valid candidate according to a simple score.
+            Best valid candidate according to a simple score. If a valid
+            candidate reaches the goal at an intermediate waypoint, the
+            returned path and duration end exactly at the first such waypoint.
         """
 
         best_candidate = None
@@ -355,7 +363,9 @@ class RRT:
         for _ in range(self.num_extension_trials):
             random_action = self.agent.get_random_action(self.rng)
             random_time = self.get_time()
-            num_record_steps = round(random_time / self.minimum_time_step)
+            num_record_steps = max(
+                1, round(random_time / self.minimum_time_step)
+            )
 
             new_state, path_to_new_state = self.agent.get_next_state(
                 parent_node.state,
@@ -363,9 +373,27 @@ class RRT:
                 random_time,
                 num_steps=num_record_steps
             )
+            step_time = float(random_time) / len(path_to_new_state)
+            goal_index = next(
+                (
+                    index
+                    for index, state in enumerate(path_to_new_state)
+                    if self.reached_goal(
+                        state, self.goal, self.goal_radius, self.agent
+                    )[0]
+                ),
+                None,
+            )
+            if goal_index is None:
+                candidate_path = path_to_new_state
+                candidate_time = float(random_time)
+            else:
+                candidate_path = path_to_new_state[: goal_index + 1]
+                candidate_time = float((goal_index + 1) * step_time)
+                new_state = candidate_path[-1]
 
             accept_new_node = self.isvalid(
-                path_to_new_state,
+                candidate_path,
                 self.agent.radius,
                 self.env.size,
                 self.static_circular_obstacles,
@@ -377,8 +405,8 @@ class RRT:
                 self.dynamic_agent_clearance,
                 self.env.boundary_buffer,
                 parent_node.time_elapsed,
-                random_time,
-                self.minimum_time_step
+                candidate_time,
+                step_time,
             )
 
             if not accept_new_node:
@@ -386,10 +414,18 @@ class RRT:
                     print("~~~~~~~~~~Sampled New RRT Node is invalid. Trying again!~~~~~~~~~~")
                     print("Current state: ", parent_node.state)
                     print("Random action: ", random_action)
-                    print("Random time: ", random_time)
+                    print("Random time: ", candidate_time)
                     print("New state: ", new_state)
-                    print("Path to new state: ", path_to_new_state)
+                    print("Path to new state: ", candidate_path)
                 continue
+
+            if goal_index is not None:
+                return (
+                    new_state,
+                    candidate_path,
+                    random_action,
+                    candidate_time,
+                )
 
             # Score: distance to the sampled point (classic RRT heuristic)
             if hasattr(self.agent, "get_distance"):
@@ -403,9 +439,9 @@ class RRT:
                 best_score = score
                 best_candidate = (
                     new_state,
-                    path_to_new_state,
+                    candidate_path,
                     random_action,
-                    random_time
+                    candidate_time,
                 )
 
         return best_candidate
@@ -430,8 +466,9 @@ class RRT:
         else:
             new_state, path_to_new_state, random_action, random_time = best_candidate
 
-            reached_goal_flag, goal_distance = self.reached_goal(new_state, self.goal, 
-                                                            self.goal_radius, self.agent)
+            reached_goal_flag, _ = self.reached_goal(
+                new_state, self.goal, self.goal_radius, self.agent
+            )
             if reached_goal_flag:
                 total_elapsed_time = parent_node.time_elapsed + random_time
                 if self.dynamic_col_checker_to_end(new_state, self.agent.radius,
@@ -456,48 +493,21 @@ class RRT:
                     self.path_time = total_elapsed_time
                     return
 
-            if not reached_goal_flag:
-                if goal_distance < self.threshold:
-                    total_elapsed_time = parent_node.time_elapsed
-                    for (index, intermediate_state) in enumerate(path_to_new_state):
-                        total_elapsed_time += self.minimum_time_step
-                        goal_flag, d = self.reached_goal(intermediate_state, self.goal, 
-                                                         self.goal_radius, self.agent)
-                        if goal_flag:
-                            if self.dynamic_col_checker_to_end(intermediate_state, self.agent.radius,
-                                                            self.dynamic_agent_obstacles,
-                                                            self.dynamic_agent_clearance,
-                                                            total_elapsed_time,
-                                                            self.minimum_time_step):
-                                if self.debug_flag:
-                                    print("Intermediate goal state will collide with high-priority agent. Trying again!")
-                                continue
-
-                            modified_edge_time = total_elapsed_time - parent_node.time_elapsed
-                            new_path_to_new_state = path_to_new_state[:index+1]
-                            edge_cost = self.cost(self.env, self.agent, parent_node.state, random_action,
-                                                modified_edge_time, new_path_to_new_state)
-                            total_cost = parent_node.cost_so_far + edge_cost
-                            new_node_id = self.add_rrt_node(intermediate_state, parent_node_id, random_action, 
-                                                            modified_edge_time, new_path_to_new_state, 
-                                                            total_elapsed_time, total_cost)
-                            self.path_found = True
-                            if self.debug_flag:
-                                print("Goal Reached! Path found for ",self.agent.id)
-                            self.goal_node_id = new_node_id
-                            self.path_cost = total_cost
-                            self.path_time = total_elapsed_time
-                            return
-                
-                edge_cost = self.cost(self.env, self.agent, parent_node.state, random_action, 
-                                        random_time, path_to_new_state)
-                total_elapsed_time = parent_node.time_elapsed + random_time
-                total_cost = parent_node.cost_so_far + edge_cost
-
-                new_node_id = self.add_rrt_node(new_state, parent_node_id, random_action, random_time,
-                                                path_to_new_state, total_elapsed_time, total_cost)
-                if self.debug_flag:
-                    print("New Node Added to the RRT Tree: ", new_node_id)
+            # Either the edge did not reach the goal, or a dynamic obstacle
+            # prevented the reached state from being accepted as a terminal
+            # state. In both cases it remains a valid transit node.
+            edge_cost = self.cost(
+                self.env, self.agent, parent_node.state, random_action,
+                random_time, path_to_new_state,
+            )
+            total_elapsed_time = parent_node.time_elapsed + random_time
+            total_cost = parent_node.cost_so_far + edge_cost
+            new_node_id = self.add_rrt_node(
+                new_state, parent_node_id, random_action, random_time,
+                path_to_new_state, total_elapsed_time, total_cost,
+            )
+            if self.debug_flag:
+                print("New Node Added to the RRT Tree: ", new_node_id)
             return
 
     def get_path_to_node_id(self, goal_node_id):
@@ -620,6 +630,22 @@ class RRT:
                 cursor = next_cursor
             return path_states
 
+    def _verify_goal_result(self):
+        """Enforce that a reported solution ends at an actually reached state."""
+        if not self.path_found:
+            return
+        if self.goal_node_id is None or self.goal_node_id not in self.tree:
+            raise RuntimeError("path_found is true without a valid goal node")
+        final_state = self.tree.nodes[self.goal_node_id]["value"].state
+        reached, distance = self.reached_goal(
+            final_state, self.goal, self.goal_radius, self.agent
+        )
+        if not reached:
+            raise RuntimeError(
+                "planner marked a non-goal final state as successful: "
+                f"distance={distance}, radius={self.goal_radius}"
+            )
+
     def plan_path(self):
         """
         Plan a path using RRT algorithm from scratch.
@@ -630,12 +656,22 @@ class RRT:
         self.last_added_node_id = -1
         self.reset_tree()
         first_node_state = self.start 
-        self.add_rrt_node(first_node_state, -1, None, None, None, 0.0, 0.0)
+        root_id = self.add_rrt_node(
+            first_node_state, -1, None, None, None, 0.0, 0.0
+        )
+        start_reached, _ = self.reached_goal(
+            self.start, self.goal, self.goal_radius, self.agent
+        )
+        if start_reached:
+            self.path_found = True
+            self.goal_node_id = root_id
+            self.path_time = 0.0
+            self.path_cost = 0.0
     
         curr_num_steps = 0
         start_time = time.time()
         
-        while curr_num_steps<=self.max_iter:
+        while not self.path_found and curr_num_steps<=self.max_iter:
             if self.debug_flag:
                 print("*************************************")
                 print("Iteration: ", curr_num_steps)
@@ -654,6 +690,7 @@ class RRT:
         self.last_plan_wall_time = total_time
         self.last_plan_iterations = curr_num_steps
         self.path_time = round(self.path_time, self.roundoff_digits)
+        self._verify_goal_result()
 
         if self.print_logs or self.debug_flag:
             planning_time_msg = "Total Planning Time"
@@ -699,6 +736,7 @@ class RRT:
         self.last_plan_wall_time = total_time
         self.last_plan_iterations = curr_num_steps
         self.path_time = round(self.path_time, self.roundoff_digits)
+        self._verify_goal_result()
 
         if self.print_logs or self.debug_flag:
             # Print the total planning time

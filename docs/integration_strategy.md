@@ -1,5 +1,10 @@
 # FlowMRMP Integration Strategy
 
+> **Historical design note.** This DiTree/UniCycle proposal predates the completed
+> Franka implementation and is retained only for context. The current 14D Franka
+> edge-bundle flow model, `FrankaFlowEBRRT` integration, reproducible commands,
+> and verified results are documented in `docs/franka_flow_matching.md`.
+
 ## Goal
 
 FlowMRMP should become the working repo for MRMP experiments that use learned

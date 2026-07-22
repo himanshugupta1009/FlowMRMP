@@ -3,3 +3,4 @@
 
 -r ditree/requirements.txt
 -r mrmp_with_kite_extend/requirements.txt
+h5py>=3.14

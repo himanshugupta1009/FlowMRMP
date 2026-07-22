@@ -28,6 +28,7 @@ DQ_MAX = np.array(
     dtype=np.float64,
 )
 DDQ_MAX = np.full(7, 15.0, dtype=np.float64)
+DDDQ_MAX = np.full(7, 500.0, dtype=np.float64)
 JOINT_NAMES = tuple(f"panda_joint{i}" for i in range(1, 8))
 
 
@@ -46,7 +47,13 @@ class EmptyFrankaEnvironment:
 class FrankaSelfCollisionChecker:
     """PyBullet self-collision checker honoring the Panda SRDF exclusions."""
 
-    def __init__(self, urdf_path: str | Path, *, visualize: bool = False):
+    def __init__(
+        self,
+        urdf_path: str | Path,
+        *,
+        visualize: bool = False,
+        load_visuals: bool | None = None,
+    ):
         try:
             import pybullet as pb
             from pybullet_utils.bullet_client import BulletClient
@@ -61,13 +68,15 @@ class FrankaSelfCollisionChecker:
             raise FileNotFoundError(self.urdf_path)
 
         mode = pb.GUI if visualize else pb.DIRECT
+        if load_visuals is None:
+            load_visuals = visualize
         try:
             from diffusion_planner.pybullet.redirect_stream import RedirectStream
         except ImportError:
             RedirectStream = None
 
         flags = pb.URDF_USE_SELF_COLLISION | pb.URDF_USE_SELF_COLLISION_EXCLUDE_PARENT
-        if not visualize:
+        if not load_visuals:
             flags |= pb.URDF_IGNORE_VISUAL_SHAPES
         if RedirectStream is None:
             self.client = BulletClient(connection_mode=mode)
@@ -129,10 +138,13 @@ class FrankaSelfCollisionChecker:
             )
 
     def set_configuration(self, q: np.ndarray) -> None:
-        for joint_index, value in zip(self.arm_joint_indices, q):
-            self.client.resetJointState(
-                self.body_id, int(joint_index), float(value), targetVelocity=0.0
-            )
+        values = [[float(value)] for value in np.asarray(q, dtype=np.float64)]
+        self.client.resetJointStatesMultiDof(
+            self.body_id,
+            self.arm_joint_indices.tolist(),
+            values,
+            [[0.0]] * len(values),
+        )
 
     def in_collision(self, q: np.ndarray) -> bool:
         self.set_configuration(np.asarray(q, dtype=np.float64))
@@ -183,6 +195,8 @@ class FrankaPanda:
         self.dynamic_limit_values = np.ones(14, dtype=np.float64)
         self.checked_waypoints = 0
         self.limit_rejections = 0
+        self.acceleration_rejections = 0
+        self.jerk_rejections = 0
         self.self_collision_rejections = 0
 
     @staticmethod
@@ -192,11 +206,26 @@ class FrankaPanda:
         dq_norm = state[..., 7:] / DQ_MAX
         return np.concatenate((q_norm, dq_norm), axis=-1)
 
+    @staticmethod
+    def normalize_configuration(state: np.ndarray) -> np.ndarray:
+        """Return only the seven normalized joint positions."""
+        state = np.asarray(state, dtype=np.float64)
+        return 2.0 * (state[..., :7] - Q_LOWER) / (Q_UPPER - Q_LOWER) - 1.0
+
     def get_distance_metric_state(self, state: np.ndarray) -> np.ndarray:
         return self.normalize_state(state)
 
     def get_distance(self, state1: np.ndarray, state2: np.ndarray) -> float:
         delta = self.normalize_state(state1) - self.normalize_state(state2)
+        return float(np.linalg.norm(delta))
+
+    @staticmethod
+    def get_goal_distance(state: np.ndarray, goal: np.ndarray) -> float:
+        """Normalized 7D joint-position distance used only for goal tests."""
+        delta = (
+            FrankaPanda.normalize_configuration(state)
+            - FrankaPanda.normalize_configuration(goal)
+        )
         return float(np.linalg.norm(delta))
 
     def get_random_action(self, rng: np.random.Generator) -> np.ndarray:
@@ -215,6 +244,12 @@ class FrankaPanda:
             raise ValueError("num_steps must be positive")
         state = np.asarray(state, dtype=np.float64)
         acceleration = np.asarray(control, dtype=np.float64)
+        if acceleration.shape != (7,):
+            raise ValueError(
+                f"control must have shape (7,), received {acceleration.shape}"
+            )
+        if not self.is_acceleration_within_limits(acceleration):
+            raise ValueError("control is non-finite or exceeds Franka acceleration limits")
         step_dt = float(dt) / num_steps
         path = np.empty((num_steps, 14), dtype=np.float64)
         current = state.copy()
@@ -227,6 +262,90 @@ class FrankaPanda:
             path[index] = next_state
             current = next_state
         return current, path
+
+    def get_next_state_sequence(
+        self,
+        state: np.ndarray,
+        accelerations: np.ndarray,
+        dt: float = 0.02,
+    ) -> tuple[np.ndarray, np.ndarray]:
+        """Roll out one piecewise-constant 7D acceleration per time interval."""
+        state = np.asarray(state, dtype=np.float64)
+        accelerations = np.asarray(accelerations, dtype=np.float64)
+        if state.shape != (14,):
+            raise ValueError(f"state must have shape (14,), received {state.shape}")
+        if accelerations.ndim != 2 or accelerations.shape[1] != 7:
+            raise ValueError(
+                "accelerations must have shape (number_of_intervals, 7), "
+                f"received {accelerations.shape}"
+            )
+        if accelerations.shape[0] == 0:
+            raise ValueError("an acceleration sequence must contain at least one interval")
+        if dt <= 0.0:
+            raise ValueError("dt must be positive")
+
+        if not self.is_action_sequence_within_limits(accelerations, dt):
+            raise ValueError(
+                "acceleration sequence is non-finite or exceeds Franka "
+                "acceleration/intra-edge jerk limits"
+            )
+        path = np.empty((accelerations.shape[0], 14), dtype=np.float64)
+        current = state.copy()
+        step_dt = float(dt)
+        for index, acceleration in enumerate(accelerations):
+            q = current[:7]
+            dq = current[7:]
+            next_state = np.empty(14, dtype=np.float64)
+            next_state[:7] = q + dq * step_dt + 0.5 * acceleration * step_dt**2
+            next_state[7:] = dq + acceleration * step_dt
+            path[index] = next_state
+            current = next_state
+        return current, path
+
+    @staticmethod
+    def is_acceleration_within_limits(acceleration: np.ndarray) -> bool:
+        acceleration = np.asarray(acceleration, dtype=np.float64)
+        return bool(
+            acceleration.shape == (7,)
+            and np.isfinite(acceleration).all()
+            and np.all(np.abs(acceleration) <= DDQ_MAX + 1e-10)
+        )
+
+    @staticmethod
+    def is_action_sequence_within_limits(
+        accelerations: np.ndarray,
+        dt: float,
+    ) -> bool:
+        """Check finite acceleration and intra-edge jerk limits.
+
+        Boundary jerk between two RRT edges is intentionally not checked here
+        because acceleration is not part of the planner's 14D state.
+        """
+        return FrankaPanda.action_sequence_violation(accelerations, dt) is None
+
+    @staticmethod
+    def action_sequence_violation(
+        accelerations: np.ndarray,
+        dt: float,
+    ) -> str | None:
+        """Return ``acceleration``, ``jerk``, or ``None`` for a sequence."""
+        accelerations = np.asarray(accelerations, dtype=np.float64)
+        if (
+            accelerations.ndim != 2
+            or accelerations.shape[0] == 0
+            or accelerations.shape[1] != 7
+            or not np.isfinite(accelerations).all()
+            or not np.isfinite(dt)
+            or dt <= 0.0
+        ):
+            return "acceleration"
+        if np.any(np.abs(accelerations) > DDQ_MAX[None, :] + 1e-10):
+            return "acceleration"
+        if len(accelerations) > 1:
+            jerk = np.diff(accelerations, axis=0) / float(dt)
+            if np.any(np.abs(jerk) > DDDQ_MAX[None, :] + 1e-10):
+                return "jerk"
+        return None
 
     def is_state_within_limits(self, state: np.ndarray) -> bool:
         state = np.asarray(state, dtype=np.float64)
@@ -270,5 +389,54 @@ class FrankaPanda:
     def agent_reached_goal(
         state: np.ndarray, goal: np.ndarray, goal_radius: float, agent: "FrankaPanda"
     ) -> tuple[bool, float]:
-        distance = agent.get_distance(state, goal)
-        return distance <= goal_radius, distance
+        state = np.asarray(state, dtype=np.float64)
+        goal = np.asarray(goal, dtype=np.float64)
+        if state.shape != (14,) or goal.shape != (14,):
+            raise ValueError(
+                f"Franka goal checks require two 14D states, got {state.shape} and "
+                f"{goal.shape}"
+            )
+        if goal_radius < 0.0:
+            raise ValueError("goal_radius must be nonnegative")
+        if not np.isfinite(state).all() or not np.isfinite(goal).all():
+            return False, float("inf")
+        # Planning and nearest-neighbor selection remain kinodynamic (14D),
+        # while task completion depends only on the seven joint positions.
+        distance = agent.get_goal_distance(state, goal)
+        return bool(distance <= goal_radius), distance
+
+    @staticmethod
+    def kd_tree_point_translate_function(
+        base_point: np.ndarray,
+        edge_start_point: np.ndarray,
+        edge_end_point: np.ndarray,
+    ) -> np.ndarray:
+        """Generated Franka endpoints are already absolute 14D states."""
+        del base_point, edge_start_point
+        return np.asarray(edge_end_point, dtype=np.float64)
+
+    @staticmethod
+    def sort_kd_tree_edges(
+        closest_tree_point: np.ndarray,
+        random_point: np.ndarray,
+        start_states: np.ndarray,
+        final_states: np.ndarray,
+        curr_edge_indices: np.ndarray,
+        curr_edge_mask: np.ndarray,
+        distance_array: np.ndarray,
+    ) -> tuple[np.ndarray, int]:
+        """Sort untried generated edges by normalized 14D endpoint distance."""
+        del closest_tree_point, start_states
+        count = len(curr_edge_indices)
+        valid = 0
+        target = FrankaPanda.normalize_state(random_point)
+        for local_index in range(count):
+            if curr_edge_mask[local_index]:
+                distance_array[local_index] = np.inf
+                continue
+            edge_index = int(curr_edge_indices[local_index])
+            endpoint = FrankaPanda.normalize_state(final_states[edge_index])
+            distance_array[local_index] = np.linalg.norm(endpoint - target)
+            valid += 1
+        order = np.argsort(distance_array[:count])
+        return order[:valid], valid
