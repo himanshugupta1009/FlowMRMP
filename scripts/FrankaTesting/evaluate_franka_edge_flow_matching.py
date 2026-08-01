@@ -18,6 +18,13 @@ import matplotlib.pyplot as plt
 import numpy as np
 import torch
 
+ROOT_DIR = Path(__file__).resolve().parents[2]
+TRAINING_SCRIPTS_DIR = ROOT_DIR / "scripts"
+MRMP_SRC = ROOT_DIR / "mrmp_with_kite_extend" / "src"
+for module_path in (TRAINING_SCRIPTS_DIR, MRMP_SRC):
+    if str(module_path) not in sys.path:
+        sys.path.insert(0, str(module_path))
+
 from train_franka_edge_flow_matching import (
     ACTION_DIM,
     EdgeSetFlowModel,
@@ -27,12 +34,6 @@ from train_franka_edge_flow_matching import (
     sample_edge_sets,
 )
 
-
-ROOT_DIR = Path(__file__).resolve().parents[1]
-PROJECT_DIR = ROOT_DIR.parent
-MRMP_SRC = ROOT_DIR / "mrmp_with_kite_extend" / "src"
-if str(MRMP_SRC) not in sys.path:
-    sys.path.insert(0, str(MRMP_SRC))
 
 from Agents.FrankaPanda import FrankaSelfCollisionChecker  # noqa: E402
 
@@ -49,7 +50,7 @@ DEFAULT_CHECKPOINT = (
     / "franka_edge_flow_k32_200k_pool128_n350000_max50_fullvalid_mps_v1"
     / "best_inference.pt"
 )
-DEFAULT_URDF = PROJECT_DIR / "assets" / "robots" / "panda" / "panda.urdf"
+DEFAULT_URDF = ROOT_DIR / "assets" / "robots" / "panda" / "panda.urdf"
 
 
 def collision_asset_hashes(urdf_path: Path) -> dict[str, str]:
@@ -62,7 +63,7 @@ def collision_asset_hashes(urdf_path: Path) -> dict[str, str]:
             if path.is_file()
         )
     )
-    return {str(path.relative_to(PROJECT_DIR)): file_sha256(path) for path in paths}
+    return {str(path.relative_to(ROOT_DIR)): file_sha256(path) for path in paths}
 
 
 def dependency_versions() -> dict[str, str | None]:

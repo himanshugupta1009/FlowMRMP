@@ -14,6 +14,8 @@ import xml.etree.ElementTree as ET
 
 import numpy as np
 
+from Agents.redirect_stream import RedirectStream
+
 
 Q_LOWER = np.array(
     [-2.8973, -1.7628, -2.8973, -3.0718, -2.8973, -0.0175, -2.8973],
@@ -70,25 +72,17 @@ class FrankaSelfCollisionChecker:
         mode = pb.GUI if visualize else pb.DIRECT
         if load_visuals is None:
             load_visuals = visualize
-        try:
-            from diffusion_planner.pybullet.redirect_stream import RedirectStream
-        except ImportError:
-            RedirectStream = None
-
         flags = pb.URDF_USE_SELF_COLLISION | pb.URDF_USE_SELF_COLLISION_EXCLUDE_PARENT
         if not load_visuals:
             flags |= pb.URDF_IGNORE_VISUAL_SHAPES
-        if RedirectStream is None:
+        # PyBullet writes URDF diagnostics through native stdout/stderr rather
+        # than Python logging. Keep those diagnostics out of benchmark output
+        # using the repository-local stream redirector.
+        with RedirectStream(sys.stdout), RedirectStream(sys.stderr):
             self.client = BulletClient(connection_mode=mode)
             self.body_id = self.client.loadURDF(
                 str(self.urdf_path), useFixedBase=True, flags=flags
             )
-        else:
-            with RedirectStream(sys.stdout), RedirectStream(sys.stderr):
-                self.client = BulletClient(connection_mode=mode)
-                self.body_id = self.client.loadURDF(
-                    str(self.urdf_path), useFixedBase=True, flags=flags
-                )
 
         joint_info = [
             self.client.getJointInfo(self.body_id, index)

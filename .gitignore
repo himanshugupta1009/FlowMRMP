@@ -8,6 +8,7 @@ planners/
 model/
 policies/
 venv/
+.venv/
 __pycache__/
 benchmark_results/
 checkpoints/
@@ -17,3 +18,5 @@ path_outputs/
 logs/
 runs/
 analysis/
+results/
+output/

@@ -1,0 +1,16 @@
+# Standalone dependencies for the Franka edge-bundle dataset, flow-matching
+# training, VanillaRRT/FlowEBRRT benchmarks, audits, and PyBullet visualization.
+h5py==3.14.0
+matplotlib==3.9.4
+networkx==3.2.1
+numba==0.60.0
+numpy==2.0.2
+pillow==11.3.0
+# PyPI provides PyBullet normally on Windows/Linux. On macOS, run
+# scripts/setup_franka_environment.py; it installs the repository's tested
+# universal CPython 3.9 binary because PyBullet 3.2.7 does not currently build
+# with this machine's Apple Clang toolchain.
+pybullet==3.2.7; platform_system != "Darwin"
+scipy==1.13.1
+torch==2.8.0
+tqdm==4.67.3

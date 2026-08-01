@@ -7,6 +7,23 @@ Each segment is encoded as a fixed vector containing zero-padded accelerations,
 normalized step count, relative configuration change, and relative velocity
 change. Padding is an encoding detail; the decoded planner edge retains only
 its generated number of executed steps.
+
+End-to-end data flow
+--------------------
+1. Load bundle conditions ``c = [q_normalized(7), dq_normalized(7)]`` and the
+   32 raw-edge references assigned to each condition.
+2. Materialize each referenced edge as one 365D vector:
+   ``50 * 7`` padded accelerations, one normalized step count, ``delta_q(7)``,
+   and ``delta_dq(7)``.
+3. Train a conditional velocity field from Gaussian noise at flow time 0 to
+   the encoded edge-set distribution at flow time 1.
+4. Mask padded acceleration steps in the main action loss, while applying a
+   small separate regularizer that teaches padded outputs to stay near zero.
+5. Save full training checkpoints and a smaller inference-only checkpoint.
+
+Tensor symbols used below: ``B`` is batch size, ``K=32`` is bundle size,
+``L=50`` is maximum edge length, ``A=7`` is action dimension, and ``D=365``
+is encoded edge dimension.
 """
 
 from __future__ import annotations
@@ -46,7 +63,12 @@ ACTION_DIM = 7
 DEFAULT_MAX_ACTIONS = 50
 
 
+# ---------------------------------------------------------------------------
+# Reproducibility and experiment configuration
+# ---------------------------------------------------------------------------
+
 def file_sha256(path: Path) -> str:
+    """Return a streaming SHA-256 digest without loading a large file at once."""
     digest = hashlib.sha256()
     with Path(path).open("rb") as stream:
         for block in iter(lambda: stream.read(1024 * 1024), b""):
@@ -55,6 +77,7 @@ def file_sha256(path: Path) -> str:
 
 
 def git_snapshot(path: Path) -> dict[str, object]:
+    """Record the repository revision and whether uncommitted edits are present."""
     try:
         head = subprocess.run(
             ["git", "-C", str(path), "rev-parse", "HEAD"],
@@ -77,6 +100,7 @@ def git_snapshot(path: Path) -> dict[str, object]:
 
 @dataclass
 class TrainConfig:
+    """Serializable record of every setting needed to reproduce a run."""
     dataset: str
     output_dir: str
     experiment_name: str
@@ -106,13 +130,17 @@ class TrainConfig:
 
 
 class SinusoidalTimeEmbedding(nn.Module):
+    """Encode scalar flow time ``t in [0,1]`` with fixed sine/cosine features."""
+
     def __init__(self, dim: int):
+        """Validate and store the even embedding width."""
         super().__init__()
         if dim % 2:
             raise ValueError("time embedding dimension must be even")
         self.dim = dim
 
     def forward(self, t: torch.Tensor) -> torch.Tensor:
+        """Convert ``t`` from shape ``(B,)`` to a feature tensor ``(B, dim)``."""
         half_dim = self.dim // 2
         frequencies = torch.exp(
             -math.log(10_000.0)
@@ -123,8 +151,18 @@ class SinusoidalTimeEmbedding(nn.Module):
         return torch.cat((torch.sin(angles), torch.cos(angles)), dim=-1)
 
 
+# ---------------------------------------------------------------------------
+# Conditional flow model
+# ---------------------------------------------------------------------------
+
+
 class EdgeSetFlowModel(nn.Module):
-    """The same conditional 32-slot Transformer used for the SOC model."""
+    """Predict the flow velocity for an entire conditional 32-edge set.
+
+    Each edge is treated as a Transformer token. Attention lets the model
+    coordinate all 32 outputs so it learns a diverse bundle rather than 32
+    unrelated samples. Slot embeddings preserve the canonical slot ordering.
+    """
 
     def __init__(
         self,
@@ -140,20 +178,22 @@ class EdgeSetFlowModel(nn.Module):
         time_embed_dim: int = 128,
         cond_embed_dim: int = 128,
     ):
+        """Construct embeddings, Transformer encoder, residual path, and head."""
         super().__init__()
         self.edge_dim = int(edge_dim)
         self.cond_dim = int(cond_dim)
         self.set_size = int(set_size)
+        # Flow time is global to a sample, so one embedding is broadcast to all
+        # K edge tokens in that bundle.
         self.time_embed = nn.Sequential(
             SinusoidalTimeEmbedding(time_embed_dim),
             nn.Linear(time_embed_dim, hidden_dim),
             nn.SiLU(),
             nn.Linear(hidden_dim, hidden_dim),
         )
-        # A 1,639D Franka edge cannot be losslessly compressed through the
-        # hidden token just to reproduce the coordinate-wise noise term.  This
-        # time-conditioned residual preserves every noisy input coordinate;
-        # the Transformer learns the lower-dimensional structured correction.
+        # The edge vector is wider than a Transformer token. This scalar,
+        # time-conditioned residual gives every input coordinate a direct path
+        # to the output while attention learns the structured correction.
         self.skip_scale = nn.Sequential(
             nn.SiLU(),
             nn.Linear(hidden_dim, 1),
@@ -164,6 +204,7 @@ class EdgeSetFlowModel(nn.Module):
             nn.Linear(cond_embed_dim, hidden_dim),
         )
         self.edge_in = nn.Linear(edge_dim, hidden_dim)
+        # Slot i always represents the i-th member after canonical sorting.
         self.slot_embed = nn.Parameter(torch.zeros(1, set_size, hidden_dim))
         layer = nn.TransformerEncoderLayer(
             d_model=hidden_dim,
@@ -188,6 +229,12 @@ class EdgeSetFlowModel(nn.Module):
     def forward(
         self, noisy_edges: torch.Tensor, t: torch.Tensor, cond: torch.Tensor
     ) -> torch.Tensor:
+        """Return velocity predictions with shape ``(B,K,D)``.
+
+        ``noisy_edges`` is the point currently moving along the flow path,
+        ``t`` is its interpolation time, and ``cond`` is the normalized 14D
+        Franka start state shared by all K edges.
+        """
         if noisy_edges.ndim != 3:
             raise ValueError(f"Expected (B,K,D), received {tuple(noisy_edges.shape)}")
         if noisy_edges.shape[1:] != (self.set_size, self.edge_dim):
@@ -195,18 +242,31 @@ class EdgeSetFlowModel(nn.Module):
                 f"Expected (*,{self.set_size},{self.edge_dim}), received "
                 f"{tuple(noisy_edges.shape)}"
             )
+        # Project each D-dimensional edge into one Transformer token.
         h = self.edge_in(noisy_edges)
         time_token = self.time_embed(t.reshape(-1).to(noisy_edges.dtype))
         skip_scale = self.skip_scale(time_token)[:, None, :]
+        # Time and robot state are global context; slot identity is local.
         global_token = time_token + self.cond_embed(cond)
         h = h + global_token[:, None, :] + self.slot_embed
         return skip_scale * noisy_edges + self.out(self.backbone(h))
 
 
+# ---------------------------------------------------------------------------
+# HDF5 reference decoding and fixed-width edge encoding
+# ---------------------------------------------------------------------------
+
+
 class FrankaEdgeBundleStore:
-    """RAM-backed decoder for the HDF5 reference representation."""
+    """Load the self-contained HDF5 and materialize training batches in RAM.
+
+    The HDF5 stores each source trajectory once and represents bundles with raw
+    edge IDs. This class flattens all source accelerations into one array, then
+    reconstructs only the requested ``(B,K,L,A)`` control blocks per batch.
+    """
 
     def __init__(self, path: Path):
+        """Read immutable dataset arrays and derive normalization/offset tables."""
         self.path = Path(path).resolve()
         started = time.perf_counter()
         with h5py.File(self.path, "r") as source:
@@ -216,14 +276,18 @@ class FrankaEdgeBundleStore:
             if isinstance(metadata_value, bytes):
                 metadata_value = metadata_value.decode("utf-8")
             self.metadata = json.loads(str(metadata_value))
+            # Conditions are normalized start states, shape (num_bundles, 14).
             self.conds = {
                 split: source[f"conds_{split}"][:].astype(np.float32, copy=False)
                 for split in ("train", "val")
             }
+            # Each row stores the K raw-edge IDs selected for one bundle.
             self.bundle_ids = {
                 split: source[f"source_edge_ids_{split}"][:]
                 for split in ("train", "val")
             }
+            # Outcomes were computed during dataset construction and are used
+            # both for training and fast endpoint ranking during planning.
             outcomes = source["bundle_outcomes"]
             self.bundle_num_steps = {
                 split: outcomes[f"num_steps_{split}"][:]
@@ -237,6 +301,8 @@ class FrankaEdgeBundleStore:
                 split: outcomes[f"delta_dq_{split}"][:]
                 for split in ("train", "val")
             }
+            # A raw edge is identified by source trajectory, start index, and
+            # number of acceleration intervals to execute.
             raw = source["raw_edges"]
             self.raw_trajectory = raw["trajectory_index"][:]
             self.raw_start = raw["start_index"][:]
@@ -255,6 +321,8 @@ class FrankaEdgeBundleStore:
                 ],
                 dtype=np.int64,
             )
+            # Offsets make every (trajectory, timestep) pair addressable in one
+            # contiguous acceleration pool without duplicating HDF5 trajectories.
             self.trajectory_offsets = np.zeros(len(decoded_names), dtype=np.int64)
             if len(decoded_names) > 1:
                 self.trajectory_offsets[1:] = np.cumsum(trajectory_lengths[:-1])
@@ -285,6 +353,7 @@ class FrankaEdgeBundleStore:
             )
         if not np.array_equal(self.raw_length, self.raw_num_steps + 1):
             raise ValueError("trajectory_length must equal num_steps + 1")
+        # Fixed vector layout: [L*A actions | N | delta_q(7) | delta_dq(7)].
         self.action_block_dim = self.max_actions * ACTION_DIM
         self.step_count_index = self.action_block_dim
         self.delta_q_slice = slice(
@@ -337,29 +406,40 @@ class FrankaEdgeBundleStore:
         self.load_seconds = time.perf_counter() - started
 
     def __len__(self) -> int:
+        """Return the total number of train and validation bundles."""
         return len(self.conds["train"]) + len(self.conds["val"])
 
     def encode_batch(
         self, split: str, sample_indices: np.ndarray
     ) -> tuple[np.ndarray, np.ndarray, np.ndarray, np.ndarray]:
+        """Decode selected bundles into model-ready NumPy arrays.
+
+        Returns ``cond (B,14)``, ``edges (B,K,D)``, ``action_mask (B,K,L)``,
+        and integer ``action_counts (B,K)``. Values are normalized so common
+        feature blocks have comparable numerical scale.
+        """
         sample_indices = np.asarray(sample_indices, dtype=np.int64)
         edge_ids = self.bundle_ids[split][sample_indices]
         batch_size = edge_ids.shape[0]
         action_counts = self.bundle_num_steps[split][sample_indices].astype(
             np.int64
         )
+        # Convert source-local acceleration indices into the flattened pool.
         starts = (
             self.trajectory_offsets[self.raw_trajectory[edge_ids]]
             + self.raw_start[edge_ids]
         )
         steps = np.arange(self.max_actions, dtype=np.int64)[None, None, :]
         action_mask = steps < action_counts[:, :, None]
+        # Clamp padded gathers to the last real index, then multiply them away.
+        # This avoids out-of-bounds indexing for short edges.
         safe_steps = np.minimum(steps, action_counts[:, :, None] - 1)
         pool_indices = starts[:, :, None] + safe_steps
         actions = self.accelerations[pool_indices]
         actions = actions / self.ddq_max[None, None, None, :]
         actions *= action_mask[:, :, :, None]
 
+        # Store duration as normalized discrete step count, not floating time.
         step_count = action_counts.astype(np.float32) / float(self.max_actions)
         delta_q = self.bundle_delta_q[split][sample_indices] / self.q_range[
             None, None, :
@@ -390,22 +470,31 @@ class FrankaEdgeBundleStore:
 
 
 class IndexDataset(Dataset):
+    """Tiny Dataset that lets DataLoader shuffle integer bundle indices."""
+
     def __init__(self, size: int):
+        """Store the number of addressable bundle rows."""
         self.size = int(size)
 
     def __len__(self) -> int:
+        """Return the number of bundle indices in this split."""
         return self.size
 
     def __getitem__(self, index: int) -> int:
+        """Return the requested integer for later vectorized collation."""
         return int(index)
 
 
 class EncodeBatch:
+    """DataLoader collator that decodes a list of bundle IDs in one vectorized call."""
+
     def __init__(self, store: FrankaEdgeBundleStore, split: str):
+        """Bind one in-memory store and its train/validation split."""
         self.store = store
         self.split = split
 
     def __call__(self, indices: list[int]):
+        """Return CPU tensors; the epoch runner transfers them to the device."""
         cond, edges, mask, counts = self.store.encode_batch(
             self.split, np.asarray(indices, dtype=np.int64)
         )
@@ -417,7 +506,13 @@ class EncodeBatch:
         )
 
 
+# ---------------------------------------------------------------------------
+# Command-line configuration and deterministic runtime setup
+# ---------------------------------------------------------------------------
+
+
 def parse_args() -> argparse.Namespace:
+    """Define model, optimizer, checkpoint, and debug command-line options."""
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
@@ -458,6 +553,7 @@ def parse_args() -> argparse.Namespace:
 
 
 def resolve_device(requested: str) -> torch.device:
+    """Resolve ``auto`` as CUDA, then Apple MPS, then CPU, with strict overrides."""
     if requested == "auto":
         if torch.cuda.is_available():
             return torch.device("cuda")
@@ -472,11 +568,17 @@ def resolve_device(requested: str) -> torch.device:
 
 
 def set_seed(seed: int) -> None:
+    """Seed Python, NumPy, CPU Torch, and every available CUDA device."""
     random.seed(seed)
     np.random.seed(seed)
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+
+# ---------------------------------------------------------------------------
+# Conditional flow-matching objective
+# ---------------------------------------------------------------------------
 
 
 def flow_matching_loss(
@@ -490,6 +592,15 @@ def flow_matching_loss(
     padded_action_weight: float,
     generator: torch.Generator | None = None,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
+    """Compute balanced conditional flow-matching loss for ragged edges.
+
+    The straight probability path is ``x_t=(1-t)*noise+t*data`` and therefore
+    has constant target velocity ``data-noise``. Valid action steps are averaged
+    per edge before averaging the batch, so a 50-step edge does not receive more
+    weight than a 5-step edge. Step count and both relative-outcome blocks are
+    always supervised. Padded controls receive only the small auxiliary term.
+    """
+    # Draw one Gaussian source edge-set and one flow time per bundle.
     noise = torch.randn(
         edges.shape,
         device=edges.device,
@@ -503,11 +614,14 @@ def flow_matching_loss(
         generator=generator,
     )
     t_view = t[:, None, None]
+    # Interpolate from noise (t=0) to the encoded data example (t=1).
     noisy_edges = (1.0 - t_view) * noise + t_view * edges
     target = edges - noise
     prediction = model(noisy_edges, t, cond)
     squared = (prediction - target).square()
 
+    # Reshape the action block so the ground-truth variable-length mask can be
+    # applied at the timestep level.
     action_error = squared[:, :, :action_block_dim].reshape(
         edges.shape[0], edges.shape[1], max_actions, ACTION_DIM
     )
@@ -518,6 +632,8 @@ def flow_matching_loss(
     )
     action_loss = valid_action_per_edge.mean()
 
+    # Padding is not part of the physical edge; this low-weight term merely
+    # makes inference padding well behaved.
     padding_mask = 1.0 - valid_mask
     padding_count = padding_mask.sum(dim=(2, 3)) * ACTION_DIM
     padded_action_per_edge = (action_error * padding_mask).sum(dim=(2, 3)) / (
@@ -532,6 +648,8 @@ def flow_matching_loss(
     step_count_loss = squared[:, :, action_block_dim].mean()
     delta_q_loss = squared[:, :, action_block_dim + 1 : action_block_dim + 8].mean()
     delta_dq_loss = squared[:, :, action_block_dim + 8 : action_block_dim + 15].mean()
+    # Give the four semantic targets equal top-level influence even though
+    # their raw coordinate counts differ substantially.
     total = (
         action_loss + step_count_loss + delta_q_loss + delta_dq_loss
     ) / 4.0 + padded_action_weight * padding_loss
@@ -558,6 +676,12 @@ def run_loader(
     description: str,
     validation_seed: int | None = None,
 ) -> dict[str, float]:
+    """Run one train or validation epoch and return sample-weighted metrics.
+
+    Passing an optimizer enables gradients and updates. Validation uses a fixed
+    noise generator so epoch-to-epoch loss changes reflect the model rather
+    than a newly sampled validation path.
+    """
     training = optimizer is not None
     model.train(training)
     totals = {
@@ -590,6 +714,7 @@ def run_loader(
             cond = cond.to(device=device, dtype=torch.float32)
             edges = edges.to(device=device, dtype=torch.float32)
             action_mask = action_mask.to(device=device)
+            # Only the training pass owns an optimizer and gradient graph.
             if optimizer is not None:
                 optimizer.zero_grad(set_to_none=True)
             loss, blocks = flow_matching_loss(
@@ -626,9 +751,11 @@ def sample_edge_sets(
     set_size: int,
     edge_dim: int,
 ) -> torch.Tensor:
+    """Generate encoded edge sets by Euler-integrating the learned ODE 0 -> 1."""
     model.eval()
     edges = torch.randn(cond.shape[0], set_size, edge_dim, device=cond.device)
     dt = 1.0 / float(steps)
+    # Explicit Euler is intentionally identical to planner-time sampling.
     for step in range(steps):
         t = torch.full(
             (cond.shape[0],),
@@ -652,6 +779,7 @@ def save_checkpoint(
     val_metrics: dict[str, float],
     inference_only: bool = False,
 ) -> None:
+    """Atomically save model metadata, metrics, and optionally optimizer state."""
     payload = {
         "model_state_dict": model.state_dict(),
         "config": asdict(config),
@@ -663,12 +791,14 @@ def save_checkpoint(
     if not inference_only:
         payload["optimizer_state_dict"] = optimizer.state_dict()
     path.parent.mkdir(parents=True, exist_ok=True)
+    # Write-then-replace prevents a partial checkpoint after interruption.
     temporary_path = path.with_suffix(path.suffix + ".tmp")
     torch.save(payload, temporary_path)
     os.replace(temporary_path, path)
 
 
 def append_metrics(path: Path, epoch: int, train: dict, val: dict) -> None:
+    """Append one epoch of overall and per-feature losses to CSV."""
     fields = [
         "loss",
         "action",
@@ -690,6 +820,7 @@ def append_metrics(path: Path, epoch: int, train: dict, val: dict) -> None:
 
 
 def plot_losses(path: Path, metrics_path: Path) -> None:
+    """Render the overall and component validation curves when Matplotlib exists."""
     try:
         import matplotlib
 
@@ -717,13 +848,20 @@ def plot_losses(path: Path, metrics_path: Path) -> None:
     plt.close(figure)
 
 
+# ---------------------------------------------------------------------------
+# Training orchestration
+# ---------------------------------------------------------------------------
+
+
 def main() -> None:
+    """Build the data/model stack, train for the requested epochs, and save artifacts."""
     args = parse_args()
     device = resolve_device(args.device)
     if args.num_workers != 0:
         raise ValueError("Use --num-workers 0; the RAM-backed store must not be duplicated")
     if args.padded_action_weight < 0.0:
         raise ValueError("padded-action-weight must be nonnegative")
+    # Debug mode keeps the full code path but shrinks every expensive dimension.
     if args.debug:
         args.epochs = 1
         args.batch_size = min(args.batch_size, 8)
@@ -737,6 +875,8 @@ def main() -> None:
         args.sample_steps = min(args.sample_steps, 4)
 
     set_seed(args.seed)
+    # Loading once avoids repeated HDF5 random access during hundreds of
+    # thousands of shuffled bundle lookups.
     store = FrankaEdgeBundleStore(args.dataset)
     store.metadata.update(
         {
@@ -786,6 +926,8 @@ def main() -> None:
         debug=args.debug,
     )
 
+    # The loader shuffles lightweight indices; EncodeBatch performs the actual
+    # vectorized decode and keeps multiprocessing disabled to avoid RAM copies.
     train_loader = DataLoader(
         IndexDataset(len(store.conds["train"])),
         batch_size=config.batch_size,
@@ -801,6 +943,7 @@ def main() -> None:
         num_workers=0,
         collate_fn=EncodeBatch(store, "val"),
     )
+    # One forward call predicts all 32 edge velocities for every condition.
     model = EdgeSetFlowModel(
         edge_dim=store.edge_dim,
         cond_dim=14,
@@ -821,6 +964,8 @@ def main() -> None:
     start_epoch = 1
     best_val = float("inf")
     best_epoch = 0
+    # Resume restores both network and optimizer; a new run refuses to overwrite
+    # an existing non-empty directory.
     if args.resume is not None:
         checkpoint = torch.load(args.resume, map_location=device, weights_only=False)
         model.load_state_dict(checkpoint["model_state_dict"])
@@ -885,6 +1030,7 @@ def main() -> None:
         append_metrics(metrics_path, epoch, last_train, last_val)
         plot_losses(run_dir / "loss_curve.png", metrics_path)
 
+        # Keep both a resumable best checkpoint and a compact planner checkpoint.
         if last_val["loss"] < best_val:
             best_val = last_val["loss"]
             best_epoch = epoch
@@ -921,6 +1067,7 @@ def main() -> None:
                 train_metrics=last_train,
                 val_metrics=last_val,
             )
+        # Periodic encoded samples are diagnostic artifacts, not planner paths.
         if config.sample_every and epoch % config.sample_every == 0:
             cond = torch.as_tensor(store.conds["val"][:4], device=device)
             generated = sample_edge_sets(

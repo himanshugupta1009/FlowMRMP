@@ -2,6 +2,22 @@
 
 The implementation reuses the MRMP KiTE-RRT planner machinery as a dependency,
 but keeps all FlowMRMP-specific code in this repository's top-level ``src``.
+
+For Franka, each tree node is a 14D state ``[q(7), dq(7)]``. The flow model
+generates 32 candidate edges, where each edge contains up to 50 joint-
+acceleration commands, a predicted step count, and a predicted relative 14D
+outcome ``[delta_q, delta_dq]``. Planning uses the learned outcome only to rank
+candidates against the sampled RRT target. Before an edge can enter the tree,
+its controls are re-propagated through the Franka dynamics and the resulting
+waypoints are checked for acceleration, jerk, position, velocity, and
+self-collision validity.
+
+High-level extension sequence:
+1. Sample a 14D RRT target and choose its nearest existing tree node.
+2. Generate or retrieve that node's flow edge bundle.
+3. Rank unused edges by predicted terminal distance to the sampled target.
+4. Traverse the ranked list, propagating and validating one edge at a time.
+5. Add the first valid result; use a random-control fallback if none succeeds.
 """
 
 from __future__ import annotations
@@ -29,18 +45,27 @@ from scripts.train_franka_edge_flow_matching import (  # noqa: E402
 )
 
 
+# ---------------------------------------------------------------------------
+# Tree-node and generated-bundle containers
+# ---------------------------------------------------------------------------
+
 class FlowEBTreeNode(KinoTIEBTreeNode):
+    """RRT node extended with a lazily generated, node-local flow bundle."""
+
     def __init__(self, sid, state, parent_id, parent_action, parent_action_duration,
                     path_from_parent, time_so_far, cost):
+        """Initialize inherited RRT fields and an empty flow-bundle cache."""
         super().__init__(sid, state, parent_id, parent_action, parent_action_duration,
                          path_from_parent, time_so_far, cost)
+        # None means the model has not yet been queried for this tree node.
         self.flow_edge_bundle = None
 
 
 class GeneratedEdgeBundle:
-    """Small EdgeBundle-like container for one generated node-local bundle."""
+    """Fixed-control EdgeBundle compatibility container used by the SOC path."""
 
     def __init__(self, actions, timesteps, start_states, final_states):
+        """Store one control, duration, start, and predicted end per edge."""
         self.actions = np.asarray(actions, dtype=np.float64)
         self.timesteps = np.asarray(timesteps, dtype=np.float64)
         self.start_states = np.asarray(start_states, dtype=np.float64)
@@ -49,7 +74,11 @@ class GeneratedEdgeBundle:
 
 
 class GeneratedSequenceEdgeBundle:
-    """Generated bundle whose members are variable-length acceleration arrays."""
+    """One Franka bundle containing variable-length acceleration sequences.
+
+    ``final_states`` and ``relative_changes`` are learned estimates used only
+    for inexpensive ranking. They never bypass physical propagation.
+    """
 
     def __init__(
         self,
@@ -59,6 +88,7 @@ class GeneratedSequenceEdgeBundle:
         final_states,
         relative_changes,
     ):
+        """Build a bundle and verify that every edge has aligned state metadata."""
         self.action_sequences = [
             np.asarray(actions, dtype=np.float32) for actions in action_sequences
         ]
@@ -88,8 +118,13 @@ class GeneratedSequenceEdgeBundle:
             )
 
     def release_edge(self, edge_index):
-        """Release a sequence after its one permitted RRT trial."""
+        """Release a sequence after its one permitted RRT trial to save memory."""
         self.action_sequences[int(edge_index)] = None
+
+
+# ---------------------------------------------------------------------------
+# Original Second Order Car generator retained for shared FlowEBRRT support
+# ---------------------------------------------------------------------------
 
 
 class SOCFlowEdgeGenerator:
@@ -101,6 +136,7 @@ class SOCFlowEdgeGenerator:
                  sample_steps=16,
                  clamp_outputs=True,
                  seed=123):
+        """Load the SOC checkpoint and reconstruct its model/normalization."""
         self.checkpoint_path = Path(checkpoint_path)
         if not self.checkpoint_path.exists():
             root_relative = ROOT_DIR / self.checkpoint_path
@@ -147,6 +183,7 @@ class SOCFlowEdgeGenerator:
 
     @staticmethod
     def _resolve_device(device):
+        """Use the requested CUDA device when present, otherwise fall back to CPU."""
         if device.startswith("cuda"):
             if not torch.cuda.is_available():
                 return torch.device("cpu")
@@ -157,6 +194,7 @@ class SOCFlowEdgeGenerator:
         return torch.device(device)
 
     def condition_from_state(self, state):
+        """Extract the SOC condition ``[speed, steering]`` from one state."""
         norm = self.normalization
         return np.array([
             state[3] / float(norm["max_speed"]),
@@ -164,6 +202,7 @@ class SOCFlowEdgeGenerator:
         ], dtype=np.float32)
 
     def conditions_from_states(self, states):
+        """Vectorized SOC condition extraction for batched inference."""
         norm = self.normalization
         states = np.asarray(states, dtype=np.float32)
         cond = np.empty((states.shape[0], 2), dtype=np.float32)
@@ -172,6 +211,7 @@ class SOCFlowEdgeGenerator:
         return np.clip(cond, -1.0, 1.0)
 
     def denormalize_edges(self, edges):
+        """Convert eight normalized SOC output features back to physical units."""
         norm = self.normalization
         out = np.asarray(edges, dtype=np.float32).copy()
         out[..., 0] *= float(norm["max_acceleration"])
@@ -185,17 +225,21 @@ class SOCFlowEdgeGenerator:
         return out
 
     def canonical_order(self, edges):
+        """Order SOC edges by endpoint direction and then duration."""
         angles = np.arctan2(edges[:, 4], edges[:, 3])
         return np.lexsort((edges[:, 2], angles))
 
     def set_profile_enabled(self, enabled):
+        """Enable or disable synchronized SOC inference timings."""
         self.enable_profile = bool(enabled)
 
     def _sync_if_cuda(self):
+        """Synchronize CUDA so optional wall-clock profiling is accurate."""
         if self.enable_profile and self.device.type == "cuda":
             torch.cuda.synchronize(self.device)
 
     def _sample_edges_tensor(self, cond):
+        """Integrate the SOC learned flow ODE from Gaussian noise to edge sets."""
         batch_size = cond.shape[0]
         edges = torch.randn(
             batch_size, self.set_size, self.edge_dim,
@@ -214,6 +258,7 @@ class SOCFlowEdgeGenerator:
         return edges, model_s
 
     def _postprocess_edges(self, edges, states, num_edges=None):
+        """Clamp, sort, and wrap decoded SOC edge sets for the planner."""
         post_t0 = time.perf_counter() if self.enable_profile else 0.0
         edges = self.denormalize_edges(edges.detach().cpu().numpy())
         if self.clamp_outputs:
@@ -258,6 +303,7 @@ class SOCFlowEdgeGenerator:
 
     @torch.no_grad()
     def sample_batch(self, states, num_edges=None):
+        """Generate one SOC edge bundle for every supplied state."""
         sample_t0 = time.perf_counter() if self.enable_profile else 0.0
         states = np.asarray(states, dtype=np.float64)
         cond_np = self.conditions_from_states(states)
@@ -275,12 +321,23 @@ class SOCFlowEdgeGenerator:
 
     @torch.no_grad()
     def sample(self, state, num_edges=None):
+        """Single-state convenience wrapper around :meth:`sample_batch`."""
         return self.sample_batch(np.asarray(state, dtype=np.float64)[None, :],
                                  num_edges=num_edges)[0]
 
 
+# ---------------------------------------------------------------------------
+# Franka flow-model inference and edge decoding
+# ---------------------------------------------------------------------------
+
+
 class FrankaFlowEdgeGenerator:
-    """Sample and decode variable-length Franka acceleration-sequence bundles."""
+    """Sample and decode variable-length Franka acceleration-sequence bundles.
+
+    The checkpoint is self-describing: its saved HDF5 metadata specifies all
+    normalization scales and encoded-vector slices. That prevents planner-time
+    decoding from silently drifting away from the training representation.
+    """
 
     def __init__(
         self,
@@ -291,6 +348,7 @@ class FrankaFlowEdgeGenerator:
         clamp_outputs=False,
         seed=123,
     ):
+        """Load an inference checkpoint and reconstruct its exact architecture."""
         self.checkpoint_path = Path(checkpoint_path)
         if not self.checkpoint_path.exists():
             root_relative = ROOT_DIR / self.checkpoint_path
@@ -305,6 +363,8 @@ class FrankaFlowEdgeGenerator:
         self.clamp_outputs = bool(clamp_outputs)
         self.seed = int(seed)
 
+        # The checkpoint contains both network weights and the dataset encoding
+        # contract needed to turn D-dimensional predictions into real controls.
         checkpoint = torch.load(
             self.checkpoint_path, map_location=self.device, weights_only=False
         )
@@ -319,6 +379,8 @@ class FrankaFlowEdgeGenerator:
         self.max_actions = int(self.encoding["max_actions"])
         self.action_dim = int(self.encoding["action_dim"])
         self.action_block_dim = int(self.encoding["action_block_dim"])
+        # New checkpoints predict a discrete normalized count. The older
+        # duration branch remains readable for backward compatibility.
         if "step_count_index" in self.encoding:
             self.step_count_index = int(self.encoding["step_count_index"])
             self.duration_index = self.step_count_index
@@ -333,6 +395,8 @@ class FrankaFlowEdgeGenerator:
         self.q_upper = np.asarray(self.normalization["q_upper"], dtype=np.float32)
         self.dq_max = np.asarray(self.normalization["dq_max_abs"], dtype=np.float32)
         self.ddq_max = np.asarray(self.normalization["ddq_max_abs"], dtype=np.float32)
+        # Relative outcomes are mandatory because FlowEBRRT ranks endpoints by
+        # adding these deltas to the exact node from which it is extending.
         if "delta_q_slice" not in self.encoding or "delta_dq_slice" not in self.encoding:
             raise ValueError(
                 "Franka FlowEBRRT requires a checkpoint trained with relative "
@@ -368,6 +432,7 @@ class FrankaFlowEdgeGenerator:
 
     @staticmethod
     def _resolve_device(device):
+        """Resolve auto/CUDA/MPS/CPU and reject unavailable explicit devices."""
         if isinstance(device, torch.device):
             return device
         if device == "auto":
@@ -383,9 +448,11 @@ class FrankaFlowEdgeGenerator:
         return torch.device(device)
 
     def set_profile_enabled(self, enabled):
+        """Enable synchronization-based timing for model and postprocessing work."""
         self.enable_profile = bool(enabled)
 
     def _sync(self):
+        """Synchronize asynchronous accelerators only when profiling is enabled."""
         if not self.enable_profile:
             return
         if self.device.type == "cuda":
@@ -394,6 +461,11 @@ class FrankaFlowEdgeGenerator:
             torch.mps.synchronize()
 
     def conditions_from_states(self, states):
+        """Normalize batched 14D states to the model condition range ``[-1,1]``.
+
+        Joint positions use their asymmetric lower/upper ranges; velocities use
+        symmetric per-joint maximum magnitudes.
+        """
         states = np.asarray(states, dtype=np.float32)
         if states.ndim != 2 or states.shape[1] != 14:
             raise ValueError(f"Expected states shape (B,14), received {states.shape}")
@@ -404,7 +476,9 @@ class FrankaFlowEdgeGenerator:
         return np.clip(np.concatenate((q_norm, dq_norm), axis=1), -1.0, 1.0)
 
     def _sample_encoded(self, cond):
+        """Euler-integrate the learned flow from noise to ``(B,K,D)`` predictions."""
         batch_size = cond.shape[0]
+        # Every planner query starts with fresh Gaussian edge-set noise.
         edges = torch.randn(
             batch_size,
             self.set_size,
@@ -415,6 +489,7 @@ class FrankaFlowEdgeGenerator:
         step_size = 1.0 / self.sample_steps
         self._sync()
         started = time.perf_counter() if self.enable_profile else 0.0
+        # Match training diagnostics: explicit Euler over flow time [0, 1].
         for step in range(self.sample_steps):
             t = torch.full(
                 (batch_size,),
@@ -429,6 +504,7 @@ class FrankaFlowEdgeGenerator:
 
     @staticmethod
     def _integrate(state, actions, dt):
+        """Reference double-integrator rollout for one acceleration sequence."""
         current = np.asarray(state, dtype=np.float64).copy()
         path = np.empty((len(actions), 14), dtype=np.float64)
         for index, acceleration in enumerate(actions):
@@ -445,7 +521,7 @@ class FrankaFlowEdgeGenerator:
 
     @staticmethod
     def _integrate_batch(state, actions, dt):
-        """Vectorized exact rollout for a rectangular set of action sequences."""
+        """Vectorized exact rollout for diagnostics on rectangular sequences."""
         state = np.asarray(state, dtype=np.float64)
         actions = np.asarray(actions, dtype=np.float64)
         cumulative_acceleration = np.cumsum(actions, axis=1)
@@ -460,14 +536,24 @@ class FrankaFlowEdgeGenerator:
         return np.concatenate((position_path, velocity_path), axis=2)
 
     def _decode(self, encoded, states, num_edges):
+        """Decode model vectors into controls, counts, and predicted outcomes.
+
+        Input ``encoded`` has shape ``(B,K,D)``. The returned bundle members
+        contain only the first predicted N controls, so zero padding is never
+        executed. Relative outcomes are denormalized and added to each exact
+        start state for ranking; control propagation later determines truth.
+        """
         started = time.perf_counter() if self.enable_profile else 0.0
         encoded = encoded.detach().cpu().numpy()
+        # Recover the rectangular padded action block (B,K,L,7).
         normalized_actions = encoded[:, :, : self.action_block_dim].reshape(
             len(states), self.set_size, self.max_actions, self.action_dim
         )
         if self.clamp_outputs:
             normalized_actions = np.clip(normalized_actions, -1.0, 1.0)
         actions = normalized_actions * self.ddq_max[None, None, None, :]
+        # Round the learned continuous output to an executable integer N in
+        # [1, max_actions]. This N is the sole control-sequence cutoff.
         length_fraction = encoded[:, :, self.step_count_index]
         if self.length_encoding == "normalized_step_count":
             length_fraction = np.clip(
@@ -484,6 +570,8 @@ class FrankaFlowEdgeGenerator:
                 length_fraction * self.max_duration / self.dt
             ).astype(np.int64)
         action_counts = np.clip(action_counts, 1, self.max_actions)
+        # Decode the learned relative final state. No integration is required
+        # for this ranking estimate, which keeps candidate sorting inexpensive.
         predicted_delta_q = (
             encoded[:, :, self.delta_q_slice]
             * self.q_range[None, None, :]
@@ -502,6 +590,8 @@ class FrankaFlowEdgeGenerator:
             sequences = []
             for edge_index in range(edge_limit):
                 count = int(action_counts[batch_index, edge_index])
+                # Discard padded controls immediately; downstream code sees a
+                # genuinely ragged sequence of exactly N acceleration rows.
                 sequence = np.array(
                     actions[batch_index, edge_index, :count],
                     dtype=np.float32,
@@ -532,6 +622,7 @@ class FrankaFlowEdgeGenerator:
 
     @torch.no_grad()
     def sample_batch(self, states, num_edges=None):
+        """Generate decoded bundles for a batch of exact 14D tree-node states."""
         started = time.perf_counter() if self.enable_profile else 0.0
         states = np.asarray(states, dtype=np.float64)
         cond = torch.as_tensor(
@@ -548,13 +639,25 @@ class FrankaFlowEdgeGenerator:
 
     @torch.no_grad()
     def sample(self, state, num_edges=None):
+        """Generate one decoded bundle for one exact 14D tree-node state."""
         return self.sample_batch(
             np.asarray(state, dtype=np.float64)[None, :], num_edges=num_edges
         )[0]
 
 
+# ---------------------------------------------------------------------------
+# Flow-guided kinodynamic RRT
+# ---------------------------------------------------------------------------
+
+
 class FlowEBRRT(KinoTIEBRRT):
-    """KinoTIEBRRT variant that generates node-local edge bundles with flow."""
+    """KinoTIEBRRT variant with lazy, node-local flow edge bundles.
+
+    The inherited class supplies tree storage, nearest-neighbor search, random
+    target sampling, collision interfaces, and random-control fallback. This
+    subclass replaces static edge lookup with FM generation, predicted-outcome
+    sorting, and sequence-aware validation.
+    """
 
     def __init__(self, * ,
                  start, goal, goal_radius, env, agent,
@@ -583,12 +686,14 @@ class FlowEBRRT(KinoTIEBRRT):
                  debug_flag=False,
                  print_logs=False,
                  dynamic_obstacles=None):
-
+        """Configure planning limits, model batching, and candidate traversal."""
         if dynamic_obstacles is None:
             from numba.typed import List
             from numba import types
             dynamic_obstacles = List.empty_list(types.Array(types.float64, 2, 'C'))
 
+        # The inherited constructor requires an edge-bundle object even though
+        # this subclass generates a different bundle for every node.
         dummy_edge_bundle = GeneratedEdgeBundle(
             actions=np.zeros((1, agent.action_length), dtype=np.float64),
             timesteps=np.ones(1, dtype=np.float64),
@@ -627,6 +732,10 @@ class FlowEBRRT(KinoTIEBRRT):
         self.flow_edge_generator = flow_edge_generator
         self.node_class = FlowEBTreeNode
         self.flow_prefetch_batch_size = max(1, int(flow_prefetch_batch_size))
+        # Retained in the public configuration for checkpoint/benchmark
+        # compatibility. Full-duration execution means target-based truncation
+        # no longer consumes this value; only a verified goal-reaching prefix
+        # may terminate an edge early.
         self.minimum_sequence_prefix_steps = max(
             1, int(minimum_sequence_prefix_steps)
         )
@@ -640,6 +749,8 @@ class FlowEBRRT(KinoTIEBRRT):
             )
         self.truncate_sequence_to_target = False
         self._plan_deadline = None
+        # Newly added nodes enter this queue so multiple node conditions can be
+        # inferred together in the next model call.
         self.uncached_flow_node_ids = deque()
         self.profile = {
             "flow_generation_s": 0.0,
@@ -662,6 +773,7 @@ class FlowEBRRT(KinoTIEBRRT):
         }
 
     def set_profile_enabled(self, enabled):
+        """Enable generator timing; planner counters are always accumulated."""
         self.flow_edge_generator.set_profile_enabled(enabled)
 
     def get_random_time(self):
@@ -671,9 +783,11 @@ class FlowEBRRT(KinoTIEBRRT):
         return float(steps * self.minimum_time_step)
 
     def _deadline_reached(self):
+        """Return whether the current planning call exhausted wall-clock budget."""
         return self._plan_deadline is not None and time.time() >= self._plan_deadline
 
     def plan_path(self):
+        """Run inherited RRT planning while exposing its deadline to inner loops."""
         # The inherited planner checks its budget between extensions.  Retain
         # that behavior and also expose the deadline inside expensive Flow
         # extension loops so one extension cannot substantially overrun it.
@@ -713,20 +827,24 @@ class FlowEBRRT(KinoTIEBRRT):
         return ids, states, controls, timesteps
 
     def reset_tree(self, some_existing_tree=None):
+        """Reset inherited tree state and discard the inference-prefetch queue."""
         super().reset_tree(some_existing_tree)
         self.uncached_flow_node_ids = deque()
 
     def add_rrt_node(self, *args, **kwargs):
+        """Add a node normally, then mark it as eligible for batched FM prefetch."""
         node_id = super().add_rrt_node(*args, **kwargs)
         self.uncached_flow_node_ids.append(node_id)
         return node_id
 
     def _attach_flow_edge_bundle(self, node, edge_bundle):
+        """Cache one generated bundle and initialize its untried-edge mask."""
         node.flow_edge_bundle = edge_bundle
         node.edge_bundle_indices = np.arange(edge_bundle.num_edges, dtype=np.int64)
         node.edge_bundle_mask = np.full((edge_bundle.num_edges,), False, dtype=bool)
 
     def _select_prefetch_nodes(self, parent_node):
+        """Choose uncached nodes to share one batched model inference call."""
         t0 = time.perf_counter()
         nodes = [parent_node]
         seen_node_ids = {parent_node.id}
@@ -744,6 +862,7 @@ class FlowEBRRT(KinoTIEBRRT):
         return nodes
 
     def _ensure_flow_edges_for_node(self, parent_node):
+        """Generate and cache the parent bundle, optionally prefetching peers."""
         if parent_node.edge_bundle_indices is not None:
             self.profile["flow_cache_hits"] += 1
             return
@@ -765,18 +884,27 @@ class FlowEBRRT(KinoTIEBRRT):
 
     def _try_edge_from_bundle(self, edge_bundle_index, parent_node,
         parent_node_id, mask_index, curr_edge_mask, debug_prefix=""):
+        """Propagate, validate, and possibly add one ranked candidate edge.
 
+        Returns True when the edge either adds a normal node or reaches the
+        goal. Returns False after any control/dynamics/collision rejection.
+        Every sequence is tried at most once and released afterward.
+        """
         t0 = time.perf_counter()
         self.profile["try_edge_calls"] += 1
         edge_bundle = parent_node.flow_edge_bundle
         if edge_bundle is None:
             raise RuntimeError("Flow edge bundle was not generated for this node.")
 
+        # Franka bundles contain variable-length sequences; SOC bundles retain
+        # the older single-constant-control representation.
         sequence_edge = hasattr(edge_bundle, "action_sequences")
         action = edge_bundle.actions[edge_bundle_index]
         if sequence_edge:
             available_steps = len(action)
             action = np.array(action, dtype=np.float32, copy=True)
+            # Reject acceleration or inter-step jerk violations before the more
+            # expensive state rollout and self-collision checks.
             if hasattr(self.agent, "action_sequence_violation"):
                 violation = self.agent.action_sequence_violation(
                     action, edge_bundle.action_dt
@@ -798,6 +926,8 @@ class FlowEBRRT(KinoTIEBRRT):
             self.profile["sequence_executed_steps"] += len(action)
             self.profile["sequence_available_steps"] += available_steps
             timestep = float(len(action) * edge_bundle.action_dt)
+            # This propagation, not the FM-predicted endpoint, determines the
+            # state and intermediate waypoints considered for tree insertion.
             new_state, path_to_new_state = self.agent.get_next_state_sequence(
                 parent_node.state, action, edge_bundle.action_dt
             )
@@ -861,6 +991,8 @@ class FlowEBRRT(KinoTIEBRRT):
                     self.profile["try_edge_s"] += time.perf_counter() - t0
                     return False
 
+        # Validate every propagated waypoint against the agent's joint/velocity
+        # limits, self-collision checker, and any environment constraints.
         accept_new_node = self.isvalid(path_to_new_state, self.agent.radius, self.env.size,
                         self.static_circular_obstacles, self.static_rectangular_obstacles,
                         self.dynamic_agent_obstacles, self.agent.dynamic_limit_indices,
@@ -901,6 +1033,8 @@ class FlowEBRRT(KinoTIEBRRT):
                 self.profile["try_edge_s"] += time.perf_counter() - t0
                 return True
 
+        # Preserve the inherited near-goal safeguard: if the endpoint is close,
+        # scan intermediate waypoints in case the path crossed the goal region.
         if not reached_goal_flag and goal_distance < self.threshold:
             total_elapsed_time = parent_node.time_elapsed
             for index, intermediate_state in enumerate(path_to_new_state):
@@ -933,6 +1067,7 @@ class FlowEBRRT(KinoTIEBRRT):
                     self.profile["try_edge_s"] += time.perf_counter() - t0
                     return True
 
+        # A valid non-goal endpoint becomes one ordinary RRT tree node.
         edge_cost = self.cost(self.env, self.agent, parent_node.state,
                               action, timestep, path_to_new_state)
         total_cost = parent_node.cost_so_far + edge_cost
@@ -976,6 +1111,7 @@ class FlowEBRRT(KinoTIEBRRT):
         return order[:num_valid], num_valid
 
     def _try_random_control_profiled(self, parent_node, parent_node_id, random_point):
+        """Run the inherited random-control fallback with timing and deadline checks."""
         if self._deadline_reached():
             return False
         t0 = time.perf_counter()
@@ -985,9 +1121,17 @@ class FlowEBRRT(KinoTIEBRRT):
         return result
 
     def extend_tree(self, parent_node_id, parent_node, random_point):
+        """Perform one flow-guided extension toward a sampled 14D target.
+
+        Epsilon exploration can bypass flow entirely. Otherwise, candidates are
+        generated/cached, ranked by predicted endpoint, and tried in order. If
+        all selected flow edges fail, random controls preserve exploration.
+        """
         self.profile["extend_calls"] += 1
         if self._deadline_reached():
             return
+        # Occasional pure-random extensions prevent total dependence on model
+        # support and retain probabilistic exploration behavior.
         if self.epsilon_random > 0.0 and self.rng.random() < self.epsilon_random:
             for _ in range(self.num_random_edges):
                 if self._try_random_control_profiled(parent_node, parent_node_id, random_point):
@@ -1012,6 +1156,8 @@ class FlowEBRRT(KinoTIEBRRT):
                 curr_edge_indices, curr_edge_mask, self.distance_array)
         self.profile["sort_edges_s"] += time.perf_counter() - t0
 
+        # num_skip_edges is the maximum number of ranked FM candidates that one
+        # extension may validate before falling back to random control.
         trial_count = min(num_valid_edges, self.num_skip_edges)
         # Traverse the nearest predicted outcomes in strict sorted order. The
         # first edge whose full propagated path is valid becomes the extension.
@@ -1032,6 +1178,7 @@ class FlowEBRRT(KinoTIEBRRT):
                 return
 
     def print_profile(self):
+        """Print accumulated generation, sorting, validation, and fallback timings."""
         generator_profile = self.flow_edge_generator.profile
         print("FlowEBRRT profile:")
         for key in (
@@ -1060,6 +1207,11 @@ class FlowEBRRT(KinoTIEBRRT):
         print("  generator_samples:", generator_profile["samples"])
         for key in ("sample_total_s", "model_s", "postprocess_s"):
             print(f"  generator_{key}: {generator_profile[key]:.6f}")
+
+
+# ---------------------------------------------------------------------------
+# Planner factories
+# ---------------------------------------------------------------------------
 
 
 def get_flow_eb_rrt_planner_soc(start, goal, goal_radius, agent, env, *,
@@ -1122,7 +1274,14 @@ def get_flow_eb_rrt_planner_franka(
     goal_sampling_probability=0.30,
     seed=0,
 ):
-    """Build a Franka FlowEBRRT using generated acceleration sequences."""
+    """Build a fully wired Franka FlowEBRRT planner.
+
+    The agent supplies 14D sampling, normalized nearest-neighbor distance,
+    double-integrator propagation, goal checking in 7D joint-position space,
+    and all validity/cost functions. The generator supplies 32 learned edges
+    per queried node. Random fallback duration is controlled separately by
+    ``max_random_edge_time``; FM duration comes from each predicted step count.
+    """
     flow_generator = FrankaFlowEdgeGenerator(
         checkpoint_path=checkpoint_path,
         device=device,

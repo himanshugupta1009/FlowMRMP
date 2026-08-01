@@ -1,0 +1,8 @@
+Metadata-Version: 2.4
+Name: pybullet
+Version: 3.2.7
+Summary: Official Python Interface for the Bullet Physics SDK specialized for Robotics Simulation and Reinforcement Learning
+Home-page: https://github.com/bulletphysics/bullet3
+Author: Erwin Coumans, Yunfei Bai, Jasmine Hsu
+License: zlib
+Platform: any

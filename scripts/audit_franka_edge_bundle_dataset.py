@@ -18,7 +18,6 @@ from scipy.spatial import cKDTree
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
 MRMP_SRC = ROOT_DIR / "mrmp_with_kite_extend" / "src"
-PROJECT_DIR = ROOT_DIR.parent
 if str(MRMP_SRC) not in sys.path:
     sys.path.insert(0, str(MRMP_SRC))
 
@@ -30,7 +29,7 @@ DEFAULT_DATASET = (
     / "data"
     / "franka_edge_bundle_200k_pool128_k32_n350000_max50_fullvalid.h5"
 )
-DEFAULT_URDF = PROJECT_DIR / "assets" / "robots" / "panda" / "panda.urdf"
+DEFAULT_URDF = ROOT_DIR / "assets" / "robots" / "panda" / "panda.urdf"
 
 
 def file_sha256(path: Path) -> str:

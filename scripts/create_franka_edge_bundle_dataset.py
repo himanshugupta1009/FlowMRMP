@@ -28,7 +28,6 @@ from scipy.spatial import cKDTree
 
 
 ROOT_DIR = Path(__file__).resolve().parents[1]
-PROJECT_DIR = ROOT_DIR.parent
 MRMP_SRC = ROOT_DIR / "mrmp_with_kite_extend" / "src"
 if str(MRMP_SRC) not in sys.path:
     sys.path.insert(0, str(MRMP_SRC))
@@ -36,14 +35,14 @@ if str(MRMP_SRC) not in sys.path:
 from Agents.FrankaPanda import FrankaSelfCollisionChecker  # noqa: E402
 
 
-DEFAULT_INPUT = PROJECT_DIR / "data" / "dataset200k.h5"
+DEFAULT_INPUT = ROOT_DIR / "data" / "dataset200k.h5"
 DEFAULT_OUTPUT = (
     ROOT_DIR
     / "data"
     / "franka_edge_bundle_200k_pool128_k32_n350000_max50_fullvalid.h5"
 )
 DEFAULT_NUM_SAMPLES = 350_000
-DEFAULT_URDF = PROJECT_DIR / "assets" / "robots" / "panda" / "panda.urdf"
+DEFAULT_URDF = ROOT_DIR / "assets" / "robots" / "panda" / "panda.urdf"
 DEFAULT_CANDIDATE_POOL = 128
 DEFAULT_MAX_EDGE_STEPS = 50
 
