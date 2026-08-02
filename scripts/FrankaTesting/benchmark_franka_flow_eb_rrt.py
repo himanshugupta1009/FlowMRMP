@@ -555,7 +555,7 @@ def main() -> None:
         checkpoint_path=args.checkpoint,
         device=args.device,
         sample_steps=args.sample_steps,
-        clamp_outputs=False,
+        clamp_outputs=True,
         seed=args.seed,
     )
     print(f"checkpoint: {generator.checkpoint_path}", flush=True)

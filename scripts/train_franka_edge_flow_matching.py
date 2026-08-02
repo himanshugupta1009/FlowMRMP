@@ -31,17 +31,21 @@ from __future__ import annotations
 import argparse
 import csv
 from dataclasses import asdict, dataclass
-from datetime import datetime
+from datetime import datetime, timezone
 import hashlib
+from importlib import metadata as importlib_metadata
 import json
 import math
 import os
 from pathlib import Path
 import platform
 import random
+import re
+import shlex
 import subprocess
 import sys
 import time
+import traceback
 
 import h5py
 import numpy as np
@@ -54,10 +58,11 @@ from tqdm.auto import tqdm
 ROOT_DIR = Path(__file__).resolve().parents[1]
 DEFAULT_DATASET = (
     ROOT_DIR
-    / "data"
+    / "dataset"
+    / "franka_eb_dataset"
     / "franka_edge_bundle_200k_pool128_k32_n350000_max50_fullvalid.h5"
 )
-DEFAULT_OUTPUT_DIR = ROOT_DIR / "checkpoints" / "franka_edge_flow"
+DEFAULT_OUTPUT_DIR = ROOT_DIR / "trained_models" / "franka_edge_flow"
 
 ACTION_DIM = 7
 DEFAULT_MAX_ACTIONS = 50
@@ -98,6 +103,132 @@ def git_snapshot(path: Path) -> dict[str, object]:
         return {"head": None, "dirty": None}
 
 
+class TeeStream:
+    """Mirror console output to both the original stream and a persistent log."""
+
+    def __init__(self, terminal, log_stream):
+        self.terminal = terminal
+        self.log_stream = log_stream
+
+    def write(self, value: str) -> int:
+        self.terminal.write(value)
+        self.log_stream.write(value)
+        return len(value)
+
+    def flush(self) -> None:
+        self.terminal.flush()
+        self.log_stream.flush()
+
+    def isatty(self) -> bool:
+        return bool(self.terminal.isatty())
+
+    @property
+    def encoding(self):
+        return self.terminal.encoding
+
+
+def utc_timestamp() -> str:
+    """Return a filesystem-safe UTC timestamp with microsecond uniqueness."""
+    return datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+
+
+def utc_isoformat() -> str:
+    """Return the current UTC time in an unambiguous machine-readable form."""
+    return datetime.now(timezone.utc).isoformat()
+
+
+def description_slug(value: str) -> str:
+    """Convert a human experiment description into a safe short path component."""
+    slug = re.sub(r"[^a-zA-Z0-9]+", "_", value.strip()).strip("_").lower()
+    return slug[:80] or "run"
+
+
+def available_memory_bytes() -> int | None:
+    """Return Linux MemAvailable when exposed by the host."""
+    try:
+        with Path("/proc/meminfo").open("r", encoding="utf-8") as stream:
+            for line in stream:
+                if line.startswith("MemAvailable:"):
+                    return int(line.split()[1]) * 1_024
+    except (OSError, ValueError, IndexError):
+        return None
+    return None
+
+
+def atomic_write_json(path: Path, payload: dict[str, object]) -> None:
+    """Atomically replace one JSON document."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary_path = path.with_suffix(path.suffix + ".tmp")
+    with temporary_path.open("w", encoding="utf-8") as stream:
+        json.dump(payload, stream, indent=2)
+        stream.write("\n")
+    os.replace(temporary_path, path)
+
+
+def resolve_run_directory(args: argparse.Namespace) -> tuple[Path, bool]:
+    """Create a unique fresh run directory or recover it from a resume checkpoint."""
+    if args.resume is not None:
+        checkpoint = args.resume.resolve()
+        parent = checkpoint.parent
+        run_dir = parent.parent if parent.name == "checkpoints" else parent
+        return run_dir, True
+
+    label = args.description or args.experiment_name or "baseline"
+    stem = f"{utc_timestamp()}_{description_slug(label)}"
+    output_root = args.output_dir.resolve()
+    output_root.mkdir(parents=True, exist_ok=True)
+    run_dir = output_root / stem
+    suffix = 1
+    while run_dir.exists():
+        run_dir = output_root / f"{stem}_{suffix:02d}"
+        suffix += 1
+    run_dir.mkdir(parents=False, exist_ok=False)
+    return run_dir, False
+
+
+def dependency_versions() -> dict[str, str | None]:
+    """Capture key package versions without requiring every optional package."""
+    versions: dict[str, str | None] = {}
+    for package in ("torch", "numpy", "h5py", "tqdm", "matplotlib"):
+        try:
+            versions[package] = importlib_metadata.version(package)
+        except importlib_metadata.PackageNotFoundError:
+            versions[package] = None
+    return versions
+
+
+def runtime_provenance(device: torch.device) -> dict[str, object]:
+    """Describe the code and machine used for this training session."""
+    gpu = None
+    if device.type == "cuda":
+        index = device.index if device.index is not None else torch.cuda.current_device()
+        properties = torch.cuda.get_device_properties(index)
+        gpu = {
+            "index": int(index),
+            "name": properties.name,
+            "total_memory_bytes": int(properties.total_memory),
+            "cuda_runtime": torch.version.cuda,
+        }
+    return {
+        "python": platform.python_version(),
+        "pytorch": torch.__version__,
+        "platform": platform.platform(),
+        "dependencies": dependency_versions(),
+        "gpu": gpu,
+        "git": git_snapshot(ROOT_DIR),
+    }
+
+
+def write_git_diff(path: Path) -> None:
+    """Save tracked working-tree changes used by the run for reproducibility."""
+    result = subprocess.run(
+        ["git", "-C", str(ROOT_DIR), "diff", "--binary", "HEAD"],
+        capture_output=True,
+        check=False,
+    )
+    path.write_bytes(result.stdout)
+
+
 @dataclass
 class TrainConfig:
     """Serializable record of every setting needed to reproduce a run."""
@@ -109,6 +240,8 @@ class TrainConfig:
     batch_size: int
     epochs: int
     lr: float
+    min_lr_ratio: float
+    warmup_steps: int
     weight_decay: float
     grad_clip: float
     num_workers: int
@@ -123,6 +256,9 @@ class TrainConfig:
     sample_every: int
     sample_steps: int
     padded_action_weight: float
+    cache_encoded_dataset: bool
+    cache_build_batch_size: int
+    amp: bool
     max_train_batches: int | None
     max_val_batches: int | None
     resume: str | None
@@ -326,6 +462,7 @@ class FrankaEdgeBundleStore:
             self.trajectory_offsets = np.zeros(len(decoded_names), dtype=np.int64)
             if len(decoded_names) > 1:
                 self.trajectory_offsets[1:] = np.cumsum(trajectory_lengths[:-1])
+            self.encoded_cache: dict[str, tuple[np.ndarray, np.ndarray]] = {}
             self.accelerations = np.empty(
                 (int(trajectory_lengths.sum()), ACTION_DIM), dtype=np.float32
             )
@@ -405,6 +542,46 @@ class FrankaEdgeBundleStore:
         )
         self.load_seconds = time.perf_counter() - started
 
+    def encoded_cache_bytes(self) -> int:
+        """Return bytes needed to cache every encoded edge and integer count."""
+        sample_count = sum(len(values) for values in self.conds.values())
+        edge_bytes = sample_count * self.set_size * self.edge_dim * np.dtype(np.float32).itemsize
+        count_bytes = sample_count * self.set_size * np.dtype(np.int64).itemsize
+        return int(edge_bytes + count_bytes)
+
+    def build_encoded_cache(self, batch_size: int = 1_024) -> dict[str, float]:
+        """Materialize the exact existing edge encoding once for repeated epochs."""
+        if batch_size <= 0:
+            raise ValueError("cache build batch size must be positive")
+        if self.encoded_cache:
+            raise RuntimeError("encoded cache has already been built")
+        started = time.perf_counter()
+        for split in ("train", "val"):
+            sample_count = len(self.conds[split])
+            cached_edges = np.empty(
+                (sample_count, self.set_size, self.edge_dim), dtype=np.float32
+            )
+            cached_counts = np.empty(
+                (sample_count, self.set_size), dtype=np.int64
+            )
+            progress = tqdm(
+                range(0, sample_count, batch_size),
+                desc=f"cache {split}",
+                leave=False,
+                disable=not sys.stderr.isatty(),
+            )
+            for start in progress:
+                stop = min(start + batch_size, sample_count)
+                indices = np.arange(start, stop, dtype=np.int64)
+                _, edges, _, counts = self.encode_batch(split, indices)
+                cached_edges[start:stop] = edges
+                cached_counts[start:stop] = counts
+            self.encoded_cache[split] = (cached_edges, cached_counts)
+        return {
+            "seconds": time.perf_counter() - started,
+            "bytes": float(self.encoded_cache_bytes()),
+        }
+
     def __len__(self) -> int:
         """Return the total number of train and validation bundles."""
         return len(self.conds["train"]) + len(self.conds["val"])
@@ -419,6 +596,17 @@ class FrankaEdgeBundleStore:
         feature blocks have comparable numerical scale.
         """
         sample_indices = np.asarray(sample_indices, dtype=np.int64)
+        if split in self.encoded_cache:
+            cached_edges, cached_counts = self.encoded_cache[split]
+            action_counts = cached_counts[sample_indices]
+            steps = np.arange(self.max_actions, dtype=np.int64)[None, None, :]
+            action_mask = steps < action_counts[:, :, None]
+            return (
+                self.conds[split][sample_indices],
+                cached_edges[sample_indices],
+                action_mask,
+                action_counts,
+            )
         edge_ids = self.bundle_ids[split][sample_indices]
         batch_size = edge_ids.shape[0]
         action_counts = self.bundle_num_steps[split][sample_indices].astype(
@@ -517,11 +705,18 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--output-dir", type=Path, default=DEFAULT_OUTPUT_DIR)
     parser.add_argument("--experiment-name", default=None)
+    parser.add_argument(
+        "--description",
+        default=None,
+        help="Short human label appended to the timestamped run directory.",
+    )
     parser.add_argument("--seed", type=int, default=123)
     parser.add_argument("--device", default="auto", choices=("auto", "cpu", "mps", "cuda"))
     parser.add_argument("--batch-size", type=int, default=128)
     parser.add_argument("--epochs", type=int, default=60)
     parser.add_argument("--lr", type=float, default=2e-4)
+    parser.add_argument("--min-lr-ratio", type=float, default=0.05)
+    parser.add_argument("--warmup-steps", type=int, default=2_000)
     parser.add_argument("--weight-decay", type=float, default=1e-4)
     parser.add_argument("--grad-clip", type=float, default=1.0)
     parser.add_argument("--num-workers", type=int, default=0)
@@ -532,7 +727,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dropout", type=float, default=0.0)
     parser.add_argument("--time-embed-dim", type=int, default=128)
     parser.add_argument("--cond-embed-dim", type=int, default=128)
-    parser.add_argument("--checkpoint-every", type=int, default=10)
+    parser.add_argument("--checkpoint-every", type=int, default=5)
     parser.add_argument("--sample-every", type=int, default=10)
     parser.add_argument("--sample-steps", type=int, default=16)
     parser.add_argument(
@@ -545,11 +740,112 @@ def parse_args() -> argparse.Namespace:
             "per edge using the ground-truth num_steps mask."
         ),
     )
+    parser.add_argument(
+        "--cache-encoded-dataset",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Cache exact fixed-width edge encodings in RAM for faster epochs.",
+    )
+    parser.add_argument("--cache-build-batch-size", type=int, default=1_024)
     parser.add_argument("--max-train-batches", type=int, default=None)
     parser.add_argument("--max-val-batches", type=int, default=None)
     parser.add_argument("--resume", type=Path, default=None)
+    parser.add_argument(
+        "--amp",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help="Use CUDA automatic mixed precision when training on CUDA.",
+    )
     parser.add_argument("--debug", action="store_true")
     return parser.parse_args()
+
+
+def cli_option_present(*names: str) -> bool:
+    """Return whether any exact or equals-style CLI option was supplied."""
+    return any(
+        argument == name or argument.startswith(name + "=")
+        for argument in sys.argv[1:]
+        for name in names
+    )
+
+
+def apply_resume_configuration(args: argparse.Namespace) -> None:
+    """Recover omitted run settings and reject incompatible resume overrides."""
+    if args.resume is None:
+        return
+    checkpoint = torch.load(args.resume, map_location="cpu", weights_only=False)
+    required_training_state = {
+        "optimizer_state_dict",
+        "scheduler_state_dict",
+        "scaler_state_dict",
+        "rng_state",
+    }
+    missing_training_state = required_training_state.difference(checkpoint)
+    if missing_training_state:
+        raise ValueError(
+            "Resume requires a full training checkpoint; missing "
+            f"{sorted(missing_training_state)}. Use best.pt, last.pt, or an "
+            "epoch_XXXX.pt checkpoint instead of best_inference.pt."
+        )
+    saved = checkpoint.get("config", {})
+    options = {
+        "dataset": ("--dataset",),
+        "seed": ("--seed",),
+        "batch_size": ("--batch-size",),
+        "epochs": ("--epochs",),
+        "lr": ("--lr",),
+        "min_lr_ratio": ("--min-lr-ratio",),
+        "warmup_steps": ("--warmup-steps",),
+        "weight_decay": ("--weight-decay",),
+        "grad_clip": ("--grad-clip",),
+        "hidden_dim": ("--hidden-dim",),
+        "depth": ("--depth",),
+        "num_heads": ("--num-heads",),
+        "mlp_ratio": ("--mlp-ratio",),
+        "dropout": ("--dropout",),
+        "time_embed_dim": ("--time-embed-dim",),
+        "cond_embed_dim": ("--cond-embed-dim",),
+        "checkpoint_every": ("--checkpoint-every",),
+        "sample_every": ("--sample-every",),
+        "sample_steps": ("--sample-steps",),
+        "padded_action_weight": ("--padded-action-weight",),
+        "max_train_batches": ("--max-train-batches",),
+        "max_val_batches": ("--max-val-batches",),
+        "cache_encoded_dataset": (
+            "--cache-encoded-dataset",
+            "--no-cache-encoded-dataset",
+        ),
+        "cache_build_batch_size": ("--cache-build-batch-size",),
+        "amp": ("--amp", "--no-amp"),
+    }
+    strict_fields = {
+        "batch_size",
+        "lr",
+        "min_lr_ratio",
+        "warmup_steps",
+        "weight_decay",
+        "hidden_dim",
+        "depth",
+        "num_heads",
+        "mlp_ratio",
+        "dropout",
+        "time_embed_dim",
+        "cond_embed_dim",
+        "padded_action_weight",
+        "max_train_batches",
+    }
+    for field, names in options.items():
+        if field not in saved:
+            continue
+        saved_value = Path(saved[field]) if field == "dataset" else saved[field]
+        supplied = cli_option_present(*names)
+        if supplied and field in strict_fields and getattr(args, field) != saved_value:
+            raise ValueError(
+                f"Cannot change --{field.replace('_', '-')} when resuming: "
+                f"checkpoint={saved_value!r}, requested={getattr(args, field)!r}"
+            )
+        if not supplied:
+            setattr(args, field, saved_value)
 
 
 def resolve_device(requested: str) -> torch.device:
@@ -574,6 +870,39 @@ def set_seed(seed: int) -> None:
     torch.manual_seed(seed)
     if torch.cuda.is_available():
         torch.cuda.manual_seed_all(seed)
+
+
+def capture_rng_state() -> dict[str, object]:
+    """Capture every RNG used by training so a resumed run is reproducible."""
+    state: dict[str, object] = {
+        "python": random.getstate(),
+        "numpy": np.random.get_state(),
+        "torch_cpu": torch.get_rng_state(),
+    }
+    if torch.cuda.is_available():
+        state["torch_cuda"] = torch.cuda.get_rng_state_all()
+    return state
+
+
+def restore_rng_state(state: dict[str, object]) -> None:
+    """Restore RNG state saved in a full training checkpoint."""
+    random.setstate(state["python"])
+    np.random.set_state(state["numpy"])
+    torch.set_rng_state(state["torch_cpu"].cpu())
+    if torch.cuda.is_available() and "torch_cuda" in state:
+        torch.cuda.set_rng_state_all([value.cpu() for value in state["torch_cuda"]])
+
+
+def cosine_schedule_factor(
+    step: int, *, warmup_steps: int, total_steps: int, min_lr_ratio: float
+) -> float:
+    """Return linear-warmup then cosine-decay multiplier for one optimizer step."""
+    if warmup_steps > 0 and step < warmup_steps:
+        return float(step + 1) / float(warmup_steps)
+    decay_steps = max(total_steps - warmup_steps, 1)
+    progress = min(max((step - warmup_steps) / decay_steps, 0.0), 1.0)
+    cosine = 0.5 * (1.0 + math.cos(math.pi * progress))
+    return min_lr_ratio + (1.0 - min_lr_ratio) * cosine
 
 
 # ---------------------------------------------------------------------------
@@ -668,6 +997,9 @@ def run_loader(
     device: torch.device,
     *,
     optimizer: torch.optim.Optimizer | None,
+    scheduler: torch.optim.lr_scheduler.LRScheduler | None,
+    scaler: torch.amp.GradScaler | None,
+    amp: bool,
     grad_clip: float,
     action_block_dim: int,
     max_actions: int,
@@ -717,21 +1049,37 @@ def run_loader(
             # Only the training pass owns an optimizer and gradient graph.
             if optimizer is not None:
                 optimizer.zero_grad(set_to_none=True)
-            loss, blocks = flow_matching_loss(
-                model,
-                edges,
-                cond,
-                action_mask,
-                action_block_dim=action_block_dim,
-                max_actions=max_actions,
-                padded_action_weight=padded_action_weight,
-                generator=generator,
-            )
+            with torch.autocast(
+                device_type=device.type, dtype=torch.float16, enabled=amp
+            ):
+                loss, blocks = flow_matching_loss(
+                    model,
+                    edges,
+                    cond,
+                    action_mask,
+                    action_block_dim=action_block_dim,
+                    max_actions=max_actions,
+                    padded_action_weight=padded_action_weight,
+                    generator=generator,
+                )
             if optimizer is not None:
-                loss.backward()
-                if grad_clip > 0.0:
-                    nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
-                optimizer.step()
+                optimizer_stepped = True
+                if scaler is not None and scaler.is_enabled():
+                    scale_before = scaler.get_scale()
+                    scaler.scale(loss).backward()
+                    scaler.unscale_(optimizer)
+                    if grad_clip > 0.0:
+                        nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+                    scaler.step(optimizer)
+                    scaler.update()
+                    optimizer_stepped = scaler.get_scale() >= scale_before
+                else:
+                    loss.backward()
+                    if grad_clip > 0.0:
+                        nn.utils.clip_grad_norm_(model.parameters(), grad_clip)
+                    optimizer.step()
+                if scheduler is not None and optimizer_stepped:
+                    scheduler.step()
             batch_samples = int(edges.shape[0])
             totals["loss"] += float(loss.item()) * batch_samples
             for key, value in blocks.items():
@@ -750,10 +1098,17 @@ def sample_edge_sets(
     steps: int,
     set_size: int,
     edge_dim: int,
+    generator: torch.Generator | None = None,
 ) -> torch.Tensor:
     """Generate encoded edge sets by Euler-integrating the learned ODE 0 -> 1."""
     model.eval()
-    edges = torch.randn(cond.shape[0], set_size, edge_dim, device=cond.device)
+    edges = torch.randn(
+        cond.shape[0],
+        set_size,
+        edge_dim,
+        device=cond.device,
+        generator=generator,
+    )
     dt = 1.0 / float(steps)
     # Explicit Euler is intentionally identical to planner-time sampling.
     for step in range(steps):
@@ -772,11 +1127,15 @@ def save_checkpoint(
     *,
     model: nn.Module,
     optimizer: torch.optim.Optimizer,
+    scheduler: torch.optim.lr_scheduler.LRScheduler,
+    scaler: torch.amp.GradScaler,
     config: TrainConfig,
     metadata: dict,
     epoch: int,
     train_metrics: dict[str, float],
     val_metrics: dict[str, float],
+    best_validation_loss: float,
+    best_epoch: int,
     inference_only: bool = False,
 ) -> None:
     """Atomically save model metadata, metrics, and optionally optimizer state."""
@@ -787,9 +1146,18 @@ def save_checkpoint(
         "epoch": int(epoch),
         "train_metrics": train_metrics,
         "val_metrics": val_metrics,
+        "best_validation_loss": float(best_validation_loss),
+        "best_epoch": int(best_epoch),
     }
     if not inference_only:
-        payload["optimizer_state_dict"] = optimizer.state_dict()
+        payload.update(
+            {
+                "optimizer_state_dict": optimizer.state_dict(),
+                "scheduler_state_dict": scheduler.state_dict(),
+                "scaler_state_dict": scaler.state_dict(),
+                "rng_state": capture_rng_state(),
+            }
+        )
     path.parent.mkdir(parents=True, exist_ok=True)
     # Write-then-replace prevents a partial checkpoint after interruption.
     temporary_path = path.with_suffix(path.suffix + ".tmp")
@@ -853,14 +1221,23 @@ def plot_losses(path: Path, metrics_path: Path) -> None:
 # ---------------------------------------------------------------------------
 
 
-def main() -> None:
-    """Build the data/model stack, train for the requested epochs, and save artifacts."""
-    args = parse_args()
-    device = resolve_device(args.device)
+def run_training(
+    args: argparse.Namespace,
+    device: torch.device,
+    run_dir: Path,
+    status: dict[str, object],
+) -> None:
+    """Build the data/model stack, train, and persist artifacts for one run."""
     if args.num_workers != 0:
         raise ValueError("Use --num-workers 0; the RAM-backed store must not be duplicated")
     if args.padded_action_weight < 0.0:
         raise ValueError("padded-action-weight must be nonnegative")
+    if args.warmup_steps < 0:
+        raise ValueError("warmup-steps must be nonnegative")
+    if not 0.0 <= args.min_lr_ratio <= 1.0:
+        raise ValueError("min-lr-ratio must be between 0 and 1")
+    if args.cache_build_batch_size <= 0:
+        raise ValueError("cache-build-batch-size must be positive")
     # Debug mode keeps the full code path but shrinks every expensive dimension.
     if args.debug:
         args.epochs = 1
@@ -873,6 +1250,7 @@ def main() -> None:
         args.sample_every = 1
         args.checkpoint_every = 1
         args.sample_steps = min(args.sample_steps, 4)
+        args.warmup_steps = min(args.warmup_steps, 1)
 
     set_seed(args.seed)
     # Loading once avoids repeated HDF5 random access during hundreds of
@@ -894,18 +1272,45 @@ def main() -> None:
             },
         }
     )
-    experiment_name = args.experiment_name or (
-        f"franka_edge_flow_{datetime.now().strftime('%Y%m%d_%H%M%S')}"
-    )
+    cache_report: dict[str, object] = {
+        "enabled": bool(args.cache_encoded_dataset),
+        "estimated_bytes": store.encoded_cache_bytes(),
+    }
+    if args.cache_encoded_dataset:
+        available_bytes = available_memory_bytes()
+        required_bytes = store.encoded_cache_bytes()
+        cache_report["available_memory_bytes_before_build"] = available_bytes
+        if available_bytes is not None and required_bytes > 0.5 * available_bytes:
+            raise MemoryError(
+                "Encoded cache requires "
+                f"{required_bytes / 2**30:.2f} GiB but only "
+                f"{available_bytes / 2**30:.2f} GiB is available. "
+                "Use --no-cache-encoded-dataset."
+            )
+        print(
+            f"Building exact encoded cache ({required_bytes / 2**30:.2f} GiB)",
+            flush=True,
+        )
+        cache_report.update(
+            store.build_encoded_cache(batch_size=args.cache_build_batch_size)
+        )
+        print(
+            "Encoded cache ready in {:.1f}s".format(cache_report["seconds"]),
+            flush=True,
+        )
+    store.metadata["training_runtime"]["encoded_cache"] = cache_report
+    experiment_name = run_dir.name
     config = TrainConfig(
         dataset=str(args.dataset.resolve()),
-        output_dir=str(args.output_dir.resolve()),
+        output_dir=str(run_dir.parent),
         experiment_name=experiment_name,
         seed=args.seed,
         device=str(device),
         batch_size=args.batch_size,
         epochs=args.epochs,
         lr=args.lr,
+        min_lr_ratio=args.min_lr_ratio,
+        warmup_steps=args.warmup_steps,
         weight_decay=args.weight_decay,
         grad_clip=args.grad_clip,
         num_workers=args.num_workers,
@@ -920,6 +1325,9 @@ def main() -> None:
         sample_every=args.sample_every,
         sample_steps=args.sample_steps,
         padded_action_weight=args.padded_action_weight,
+        cache_encoded_dataset=args.cache_encoded_dataset,
+        cache_build_batch_size=args.cache_build_batch_size,
+        amp=bool(args.amp and device.type == "cuda"),
         max_train_batches=args.max_train_batches,
         max_val_batches=args.max_val_batches,
         resume=None if args.resume is None else str(args.resume.resolve()),
@@ -959,27 +1367,88 @@ def main() -> None:
     optimizer = torch.optim.AdamW(
         model.parameters(), lr=config.lr, weight_decay=config.weight_decay
     )
+    train_steps_per_epoch = len(train_loader)
+    if config.max_train_batches is not None:
+        train_steps_per_epoch = min(train_steps_per_epoch, config.max_train_batches)
+    total_training_steps = max(train_steps_per_epoch * config.epochs, 1)
+    effective_warmup_steps = min(config.warmup_steps, max(total_training_steps - 1, 0))
+    scheduler = torch.optim.lr_scheduler.LambdaLR(
+        optimizer,
+        lr_lambda=lambda step: cosine_schedule_factor(
+            step,
+            warmup_steps=effective_warmup_steps,
+            total_steps=total_training_steps,
+            min_lr_ratio=config.min_lr_ratio,
+        ),
+    )
+    scaler = torch.amp.GradScaler("cuda", enabled=config.amp)
 
-    run_dir = Path(config.output_dir) / config.experiment_name
     start_epoch = 1
     best_val = float("inf")
     best_epoch = 0
-    # Resume restores both network and optimizer; a new run refuses to overwrite
+    # Resume restores the complete training state; a new run refuses to overwrite
     # an existing non-empty directory.
     if args.resume is not None:
         checkpoint = torch.load(args.resume, map_location=device, weights_only=False)
+        expected_dataset_hash = checkpoint.get("dataset_metadata", {}).get(
+            "dataset_sha256"
+        )
+        actual_dataset_hash = store.metadata["dataset_sha256"]
+        if (
+            expected_dataset_hash is not None
+            and expected_dataset_hash != actual_dataset_hash
+        ):
+            raise ValueError(
+                "Resume checkpoint/dataset mismatch: "
+                f"expected {expected_dataset_hash}, found {actual_dataset_hash}"
+            )
         model.load_state_dict(checkpoint["model_state_dict"])
         if "optimizer_state_dict" in checkpoint:
             optimizer.load_state_dict(checkpoint["optimizer_state_dict"])
+        if "scheduler_state_dict" in checkpoint:
+            scheduler.load_state_dict(checkpoint["scheduler_state_dict"])
+        if "scaler_state_dict" in checkpoint:
+            scaler.load_state_dict(checkpoint["scaler_state_dict"])
+        if "rng_state" in checkpoint:
+            restore_rng_state(checkpoint["rng_state"])
         start_epoch = int(checkpoint["epoch"]) + 1
-        best_val = float(checkpoint.get("val_metrics", {}).get("loss", float("inf")))
-        best_epoch = int(checkpoint["epoch"])
-        run_dir = args.resume.resolve().parent
-    elif run_dir.exists() and any(run_dir.iterdir()):
-        raise FileExistsError(f"Refusing to overwrite non-empty run: {run_dir}")
-    run_dir.mkdir(parents=True, exist_ok=True)
-    with (run_dir / "config.json").open("w", encoding="utf-8") as stream:
-        json.dump({"config": asdict(config), "dataset_metadata": store.metadata}, stream, indent=2)
+        best_val = float(
+            checkpoint.get(
+                "best_validation_loss",
+                checkpoint.get("val_metrics", {}).get("loss", float("inf")),
+            )
+        )
+        best_epoch = int(checkpoint.get("best_epoch", checkpoint["epoch"]))
+
+    checkpoint_dir = run_dir / "checkpoints"
+    metrics_dir = run_dir / "metrics"
+    samples_dir = run_dir / "samples"
+    manifest_path = run_dir / "run.json"
+    with manifest_path.open("r", encoding="utf-8") as stream:
+        manifest = json.load(stream)
+    manifest.setdefault("resolved_config_history", []).append(
+        {
+            "session_id": status["active_session"],
+            "config": asdict(config),
+        }
+    )
+    manifest.update(
+        {
+            "resolved_config": asdict(config),
+            "dataset_metadata": store.metadata,
+            "artifacts": {
+                "checkpoints": str(checkpoint_dir.resolve()),
+                "metrics": str(metrics_dir.resolve()),
+                "samples": str(samples_dir.resolve()),
+                "console_log": str((run_dir / "console.log").resolve()),
+            },
+        }
+    )
+    atomic_write_json(manifest_path, manifest)
+    atomic_write_json(
+        run_dir / "config.json",
+        {"config": asdict(config), "dataset_metadata": store.metadata},
+    )
 
     print(f"Training: {config.experiment_name}", flush=True)
     print(f"Dataset: {store.path}", flush=True)
@@ -987,9 +1456,14 @@ def main() -> None:
     print(f"Train/validation: {len(store.conds['train']):,}/{len(store.conds['val']):,}", flush=True)
     print(f"Edge tensor: (32, {store.edge_dim})", flush=True)
     print(f"Parameters: {sum(parameter.numel() for parameter in model.parameters()):,}", flush=True)
-    print(f"Device: {device}", flush=True)
+    print(f"Device: {device}; AMP: {config.amp}", flush=True)
+    print(
+        f"LR schedule: warmup={effective_warmup_steps:,} steps, "
+        f"total={total_training_steps:,} steps, min_lr={config.lr * config.min_lr_ratio:.3g}",
+        flush=True,
+    )
 
-    metrics_path = run_dir / "losses.csv"
+    metrics_path = metrics_dir / "losses.csv"
     last_train = {}
     last_val = {}
     training_started = time.perf_counter()
@@ -1000,6 +1474,9 @@ def main() -> None:
             train_loader,
             device,
             optimizer=optimizer,
+            scheduler=scheduler,
+            scaler=scaler,
+            amp=config.amp,
             grad_clip=config.grad_clip,
             action_block_dim=store.action_block_dim,
             max_actions=store.max_actions,
@@ -1013,6 +1490,9 @@ def main() -> None:
             val_loader,
             device,
             optimizer=None,
+            scheduler=None,
+            scaler=None,
+            amp=config.amp,
             grad_clip=0.0,
             action_block_dim=store.action_block_dim,
             max_actions=store.max_actions,
@@ -1028,73 +1508,102 @@ def main() -> None:
             flush=True,
         )
         append_metrics(metrics_path, epoch, last_train, last_val)
-        plot_losses(run_dir / "loss_curve.png", metrics_path)
-
+        plot_losses(metrics_dir / "loss_curve.png", metrics_path)
         # Keep both a resumable best checkpoint and a compact planner checkpoint.
         if last_val["loss"] < best_val:
             best_val = last_val["loss"]
             best_epoch = epoch
             save_checkpoint(
-                run_dir / "best.pt",
+                checkpoint_dir / "best.pt",
                 model=model,
                 optimizer=optimizer,
+                scheduler=scheduler,
+                scaler=scaler,
                 config=config,
                 metadata=store.metadata,
                 epoch=epoch,
                 train_metrics=last_train,
                 val_metrics=last_val,
+                best_validation_loss=best_val,
+                best_epoch=best_epoch,
             )
             save_checkpoint(
-                run_dir / "best_inference.pt",
+                checkpoint_dir / "best_inference.pt",
                 model=model,
                 optimizer=optimizer,
+                scheduler=scheduler,
+                scaler=scaler,
                 config=config,
                 metadata=store.metadata,
                 epoch=epoch,
                 train_metrics=last_train,
                 val_metrics=last_val,
+                best_validation_loss=best_val,
+                best_epoch=best_epoch,
                 inference_only=True,
             )
 
         if config.checkpoint_every and epoch % config.checkpoint_every == 0:
             save_checkpoint(
-                run_dir / f"epoch_{epoch:04d}.pt",
+                checkpoint_dir / f"epoch_{epoch:04d}.pt",
                 model=model,
                 optimizer=optimizer,
+                scheduler=scheduler,
+                scaler=scaler,
                 config=config,
                 metadata=store.metadata,
                 epoch=epoch,
                 train_metrics=last_train,
                 val_metrics=last_val,
+                best_validation_loss=best_val,
+                best_epoch=best_epoch,
             )
         # Periodic encoded samples are diagnostic artifacts, not planner paths.
         if config.sample_every and epoch % config.sample_every == 0:
             cond = torch.as_tensor(store.conds["val"][:4], device=device)
+            sample_generator = torch.Generator(device=device)
+            sample_generator.manual_seed(config.seed + 20_000 + epoch)
             generated = sample_edge_sets(
                 model,
                 cond,
                 steps=config.sample_steps,
                 set_size=store.set_size,
                 edge_dim=store.edge_dim,
+                generator=sample_generator,
             )
             np.savez_compressed(
-                run_dir / f"samples_epoch_{epoch:04d}.npz",
+                samples_dir / f"epoch_{epoch:04d}.npz",
                 cond=cond.cpu().numpy(),
                 edges=generated.cpu().numpy(),
             )
+        status.update(
+            {
+                "last_completed_epoch": epoch,
+                "best_epoch": best_epoch,
+                "best_validation_loss": best_val,
+                "latest_train_loss": last_train["loss"],
+                "latest_validation_loss": last_val["loss"],
+                "updated_at": utc_isoformat(),
+            }
+        )
+        atomic_write_json(run_dir / "status.json", status)
 
     save_checkpoint(
-        run_dir / "last.pt",
+        checkpoint_dir / "last.pt",
         model=model,
         optimizer=optimizer,
+        scheduler=scheduler,
+        scaler=scaler,
         config=config,
         metadata=store.metadata,
         epoch=config.epochs,
         train_metrics=last_train,
         val_metrics=last_val,
+        best_validation_loss=best_val,
+        best_epoch=best_epoch,
     )
     total_seconds = time.perf_counter() - training_started
-    inference_checkpoint = run_dir / "best_inference.pt"
+    inference_checkpoint = checkpoint_dir / "best_inference.pt"
     with (run_dir / "training_summary.json").open("w", encoding="utf-8") as stream:
         json.dump(
             {
@@ -1113,5 +1622,136 @@ def main() -> None:
     print(f"Finished in {total_seconds:.1f}s; artifacts: {run_dir}", flush=True)
 
 
+
+def main() -> int:
+    """Create or resume one managed run and capture its complete console output."""
+    args = parse_args()
+    apply_resume_configuration(args)
+    device = resolve_device(args.device)
+    run_dir, resumed = resolve_run_directory(args)
+    for child in ("checkpoints", "metrics", "samples", "provenance"):
+        (run_dir / child).mkdir(parents=True, exist_ok=True)
+
+    session_id = utc_timestamp()
+    session_dir = run_dir / "provenance" / session_id
+    session_dir.mkdir(parents=True, exist_ok=False)
+    command = shlex.join([sys.executable, *sys.argv])
+    (session_dir / "command.txt").write_text(command + "\n", encoding="utf-8")
+    write_git_diff(session_dir / "git_diff.patch")
+
+    cli_arguments = {
+        key: str(value) if isinstance(value, Path) else value
+        for key, value in vars(args).items()
+    }
+    session = {
+        "session_id": session_id,
+        "started_at": utc_isoformat(),
+        "resumed": resumed,
+        "resume_checkpoint": (
+            None if args.resume is None else str(args.resume.resolve())
+        ),
+        "command": command,
+        "cli_arguments": cli_arguments,
+        "runtime": runtime_provenance(device),
+        "provenance_directory": str(session_dir.resolve()),
+    }
+    manifest_path = run_dir / "run.json"
+    if manifest_path.exists():
+        with manifest_path.open("r", encoding="utf-8") as stream:
+            manifest = json.load(stream)
+    else:
+        manifest = {
+            "format_version": 1,
+            "run_id": run_dir.name,
+            "description": args.description or args.experiment_name or "baseline",
+            "created_at": session["started_at"],
+            "sessions": [],
+        }
+    manifest.setdefault("sessions", []).append(session)
+    atomic_write_json(manifest_path, manifest)
+
+    status_path = run_dir / "status.json"
+    if status_path.exists():
+        with status_path.open("r", encoding="utf-8") as stream:
+            status = json.load(stream)
+    else:
+        status = {"run_id": run_dir.name}
+    status.update(
+        {
+            "state": "running",
+            "active_session": session_id,
+            "started_at": session["started_at"],
+            "updated_at": utc_isoformat(),
+        }
+    )
+    status.pop("completed_at", None)
+    status.pop("failed_at", None)
+    status.pop("interrupted_at", None)
+    atomic_write_json(status_path, status)
+
+    log_path = run_dir / "console.log"
+    original_stdout = sys.stdout
+    original_stderr = sys.stderr
+    log_stream = log_path.open("a", encoding="utf-8", buffering=1)
+    sys.stdout = TeeStream(original_stdout, log_stream)
+    sys.stderr = TeeStream(original_stderr, log_stream)
+    exit_code = 0
+    try:
+        print(
+            f"Training session {session_id} ({'resume' if resumed else 'fresh'})",
+            flush=True,
+        )
+        print(f"Run directory: {run_dir}", flush=True)
+        print(f"Command: {command}", flush=True)
+        run_training(args, device, run_dir, status)
+        status.update(
+            {
+                "state": "completed",
+                "completed_at": utc_isoformat(),
+                "updated_at": utc_isoformat(),
+            }
+        )
+    except KeyboardInterrupt:
+        traceback.print_exc()
+        status.update(
+            {
+                "state": "interrupted",
+                "interrupted_at": utc_isoformat(),
+                "updated_at": utc_isoformat(),
+            }
+        )
+        exit_code = 130
+    except BaseException:
+        traceback.print_exc()
+        status.update(
+            {
+                "state": "failed",
+                "failed_at": utc_isoformat(),
+                "updated_at": utc_isoformat(),
+            }
+        )
+        exit_code = 1
+    finally:
+        with manifest_path.open("r", encoding="utf-8") as stream:
+            final_manifest = json.load(stream)
+        for recorded_session in final_manifest.get("sessions", []):
+            if recorded_session.get("session_id") == session_id:
+                recorded_session.update(
+                    {
+                        "state": status["state"],
+                        "ended_at": utc_isoformat(),
+                        "exit_code": exit_code,
+                    }
+                )
+                break
+        atomic_write_json(manifest_path, final_manifest)
+        atomic_write_json(status_path, status)
+        print(f"Run state: {status['state']}", flush=True)
+        sys.stdout = original_stdout
+        sys.stderr = original_stderr
+        log_stream.close()
+    return exit_code
+
+
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())

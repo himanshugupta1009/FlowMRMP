@@ -4,11 +4,13 @@
 from __future__ import annotations
 
 import argparse
+from datetime import datetime, timezone
 from importlib import metadata as importlib_metadata
 import json
 from pathlib import Path
 import platform
 import random
+import re
 import sys
 
 import matplotlib
@@ -81,6 +83,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--dataset", type=Path, default=DEFAULT_DATASET)
     parser.add_argument("--checkpoint", type=Path, default=DEFAULT_CHECKPOINT)
     parser.add_argument("--output-dir", type=Path, default=None)
+    parser.add_argument(
+        "--evaluation-name",
+        default=None,
+        help="Optional label for the automatically created run/evaluation directory.",
+    )
     parser.add_argument("--device", default="auto", choices=("auto", "cpu", "mps", "cuda"))
     parser.add_argument("--num-conditions", type=int, default=256)
     parser.add_argument("--batch-size", type=int, default=16)
@@ -89,6 +96,27 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--urdf", type=Path, default=DEFAULT_URDF)
     parser.add_argument("--seed", type=int, default=991)
     return parser.parse_args()
+
+
+def default_evaluation_dir(
+    checkpoint: Path,
+    evaluation_name: str | None,
+    *,
+    num_conditions: int,
+    sample_steps: int,
+    seed: int,
+) -> Path:
+    """Return a unique evaluation directory alongside a managed training run."""
+    checkpoint = checkpoint.resolve()
+    if checkpoint.parent.name == "checkpoints":
+        run_dir = checkpoint.parent.parent
+        label = evaluation_name or (
+            f"{checkpoint.stem}_n{num_conditions}_s{sample_steps}_seed{seed}"
+        )
+        label = re.sub(r"[^A-Za-z0-9_.-]+", "_", label).strip("._") or "evaluation"
+        timestamp = datetime.now(timezone.utc).strftime("%Y%m%d_%H%M%S_%f")
+        return run_dir / "evaluations" / f"{timestamp}_{label}"
+    return checkpoint.parent / "evaluation"
 
 
 def percentile_summary(values: np.ndarray) -> dict[str, float | None]:
@@ -514,7 +542,17 @@ def main() -> None:
         "decoded_rollout_validity": {**rollout_stats, **collision_stats},
     }
 
-    output_dir = (args.output_dir or args.checkpoint.resolve().parent / "evaluation").resolve()
+    output_dir = (
+        args.output_dir.resolve()
+        if args.output_dir is not None
+        else default_evaluation_dir(
+            args.checkpoint,
+            args.evaluation_name,
+            num_conditions=args.num_conditions,
+            sample_steps=args.sample_steps,
+            seed=args.seed,
+        ).resolve()
+    )
     output_dir.mkdir(parents=True, exist_ok=True)
     with (output_dir / "summary.json").open("w", encoding="utf-8") as stream:
         json.dump(summary, stream, indent=2, sort_keys=True)

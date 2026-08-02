@@ -345,7 +345,7 @@ class FrankaFlowEdgeGenerator:
         checkpoint_path,
         device="auto",
         sample_steps=16,
-        clamp_outputs=False,
+        clamp_outputs=True,
         seed=123,
     ):
         """Load an inference checkpoint and reconstruct its exact architecture."""
@@ -1286,7 +1286,7 @@ def get_flow_eb_rrt_planner_franka(
         checkpoint_path=checkpoint_path,
         device=device,
         sample_steps=sample_steps,
-        clamp_outputs=False,
+        clamp_outputs=True,
         seed=42 + int(seed),
     )
     return FlowEBRRT(
