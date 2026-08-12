@@ -10,8 +10,10 @@ its generated number of executed steps.
 
 End-to-end data flow
 --------------------
-1. Load bundle conditions ``c = [q_normalized(7), dq_normalized(7)]`` and the
-   32 raw-edge references assigned to each condition.
+1. Load the 32 raw-edge references assigned to each condition. The original
+   dataset uses ``c = [q_normalized(7), dq_normalized(7)]``. The target-aware
+   companion dataset uses ``c = [current_state(14), relative_target(14),
+   goal_mode(1)]`` and stores a target-dependent ordering of those edges.
 2. Materialize each referenced edge as one 365D vector:
    ``50 * 7`` padded accelerations, one normalized step count, ``delta_q(7)``,
    and ``delta_dq(7)``.
@@ -60,7 +62,7 @@ DEFAULT_DATASET = (
     ROOT_DIR
     / "dataset"
     / "franka_eb_dataset"
-    / "franka_edge_bundle_200k_pool128_k32_n350000_max50_fullvalid.h5"
+    / "franka_edge_bundle_200k_pool128_k32_n350000_max50_targetcond_v1.h5"
 )
 DEFAULT_OUTPUT_DIR = ROOT_DIR / "trained_models" / "franka_edge_flow"
 
@@ -107,23 +109,28 @@ class TeeStream:
     """Mirror console output to both the original stream and a persistent log."""
 
     def __init__(self, terminal, log_stream):
+        """Store the console and persistent-log destinations."""
         self.terminal = terminal
         self.log_stream = log_stream
 
     def write(self, value: str) -> int:
+        """Write identical text to both destinations."""
         self.terminal.write(value)
         self.log_stream.write(value)
         return len(value)
 
     def flush(self) -> None:
+        """Flush both destinations together."""
         self.terminal.flush()
         self.log_stream.flush()
 
     def isatty(self) -> bool:
+        """Preserve terminal detection for libraries that inspect stdout."""
         return bool(self.terminal.isatty())
 
     @property
     def encoding(self):
+        """Expose the wrapped terminal's text encoding."""
         return self.terminal.encoding
 
 
@@ -256,6 +263,8 @@ class TrainConfig:
     sample_every: int
     sample_steps: int
     padded_action_weight: float
+    target_progress_weight: float
+    target_recall_radius: float
     cache_encoded_dataset: bool
     cache_build_batch_size: int
     amp: bool
@@ -297,7 +306,8 @@ class EdgeSetFlowModel(nn.Module):
 
     Each edge is treated as a Transformer token. Attention lets the model
     coordinate all 32 outputs so it learns a diverse bundle rather than 32
-    unrelated samples. Slot embeddings preserve the canonical slot ordering.
+    unrelated samples. Slot embeddings preserve either the source canonical
+    ordering or the target-conditioned ordering supplied by the dataset.
     """
 
     def __init__(
@@ -368,8 +378,9 @@ class EdgeSetFlowModel(nn.Module):
         """Return velocity predictions with shape ``(B,K,D)``.
 
         ``noisy_edges`` is the point currently moving along the flow path,
-        ``t`` is its interpolation time, and ``cond`` is the normalized 14D
-        Franka start state shared by all K edges.
+        ``t`` is its interpolation time, and ``cond`` is either the normalized
+        14D Franka start state or the 29D target-aware condition shared by all
+        K edges.
         """
         if noisy_edges.ndim != 3:
             raise ValueError(f"Expected (B,K,D), received {tuple(noisy_edges.shape)}")
@@ -405,74 +416,224 @@ class FrankaEdgeBundleStore:
         """Read immutable dataset arrays and derive normalization/offset tables."""
         self.path = Path(path).resolve()
         started = time.perf_counter()
-        with h5py.File(self.path, "r") as source:
-            if source.attrs.get("format_name") != "franka_variable_length_edge_bundle":
+        target_view = None
+        with h5py.File(self.path, "r") as dataset:
+            format_name = dataset.attrs.get("format_name")
+            if format_name == "franka_target_conditioned_edge_bundle":
+                metadata_value = dataset["metadata_json"][()]
+                if isinstance(metadata_value, bytes):
+                    metadata_value = metadata_value.decode("utf-8")
+                target_metadata = json.loads(str(metadata_value))
+                source_basename = str(dataset.attrs["source_dataset_basename"])
+                local_source = self.path.parent / source_basename
+                original_source = Path(
+                    str(dataset.attrs["source_dataset_original_path"])
+                )
+                if local_source.is_file():
+                    source_path = local_source.resolve()
+                elif original_source.is_file():
+                    source_path = original_source.resolve()
+                else:
+                    raise FileNotFoundError(
+                        "Target-conditioned dataset requires its source HDF5. "
+                        f"Expected {local_source} or {original_source}"
+                    )
+                target_view = {
+                    "metadata": target_metadata,
+                    "conds": {
+                        split: dataset[f"conds_{split}"][:].astype(
+                            np.float32, copy=False
+                        )
+                        for split in ("train", "val")
+                    },
+                    "base_indices": {
+                        split: dataset[f"base_indices_{split}"][:]
+                        for split in ("train", "val")
+                    },
+                    "edge_order": {
+                        split: dataset[f"edge_order_{split}"][:].astype(
+                            np.int64, copy=False
+                        )
+                        for split in ("train", "val")
+                    },
+                }
+                self.preserve_bundle_order = True
+            elif format_name == "franka_variable_length_edge_bundle":
+                source_path = self.path
+                self.preserve_bundle_order = False
+            else:
                 raise ValueError(f"Not a Franka edge-bundle dataset: {self.path}")
+
+        self.source_path = source_path
+        with h5py.File(source_path, "r") as source:
+            if source.attrs.get("format_name") != "franka_variable_length_edge_bundle":
+                raise ValueError(f"Invalid source Franka edge dataset: {source_path}")
             metadata_value = source["metadata_json"][()]
             if isinstance(metadata_value, bytes):
                 metadata_value = metadata_value.decode("utf-8")
             self.metadata = json.loads(str(metadata_value))
-            # Conditions are normalized start states, shape (num_bundles, 14).
-            self.conds = {
-                split: source[f"conds_{split}"][:].astype(np.float32, copy=False)
-                for split in ("train", "val")
-            }
-            # Each row stores the K raw-edge IDs selected for one bundle.
-            self.bundle_ids = {
-                split: source[f"source_edge_ids_{split}"][:]
-                for split in ("train", "val")
-            }
+            if target_view is None:
+                # Conditions are normalized start states, shape (num_bundles, 14).
+                self.conds = {
+                    split: source[f"conds_{split}"][:].astype(
+                        np.float32, copy=False
+                    )
+                    for split in ("train", "val")
+                }
+                # Each row stores the K raw-edge IDs selected for one bundle.
+                self.bundle_ids = {
+                    split: source[f"source_edge_ids_{split}"][:]
+                    for split in ("train", "val")
+                }
+            else:
+                self.conds = target_view["conds"]
+                self.bundle_ids = {}
+                for split in ("train", "val"):
+                    base_indices = target_view["base_indices"][split]
+                    unique_indices, inverse = np.unique(
+                        base_indices, return_inverse=True
+                    )
+                    base_ids = source[f"source_edge_ids_{split}"][unique_indices][
+                        inverse
+                    ]
+                    order = target_view["edge_order"][split]
+                    self.bundle_ids[split] = np.take_along_axis(
+                        base_ids, order, axis=1
+                    )
             # Outcomes were computed during dataset construction and are used
             # both for training and fast endpoint ranking during planning.
             outcomes = source["bundle_outcomes"]
-            self.bundle_num_steps = {
-                split: outcomes[f"num_steps_{split}"][:]
-                for split in ("train", "val")
-            }
-            self.bundle_delta_q = {
-                split: outcomes[f"delta_q_{split}"][:]
-                for split in ("train", "val")
-            }
-            self.bundle_delta_dq = {
-                split: outcomes[f"delta_dq_{split}"][:]
-                for split in ("train", "val")
-            }
+            if target_view is None:
+                self.bundle_num_steps = {
+                    split: outcomes[f"num_steps_{split}"][:]
+                    for split in ("train", "val")
+                }
+                self.bundle_delta_q = {
+                    split: outcomes[f"delta_q_{split}"][:]
+                    for split in ("train", "val")
+                }
+                self.bundle_delta_dq = {
+                    split: outcomes[f"delta_dq_{split}"][:]
+                    for split in ("train", "val")
+                }
+            else:
+                self.bundle_num_steps = {}
+                self.bundle_delta_q = {}
+                self.bundle_delta_dq = {}
+                for split in ("train", "val"):
+                    base_indices = target_view["base_indices"][split]
+                    unique_indices, inverse = np.unique(
+                        base_indices, return_inverse=True
+                    )
+                    order = target_view["edge_order"][split]
+                    for destination, name in (
+                        (self.bundle_num_steps, "num_steps"),
+                        (self.bundle_delta_q, "delta_q"),
+                        (self.bundle_delta_dq, "delta_dq"),
+                    ):
+                        values = outcomes[f"{name}_{split}"][unique_indices][inverse]
+                        destination[split] = np.take_along_axis(
+                            values,
+                            order if values.ndim == 2 else order[:, :, None],
+                            axis=1,
+                        )
             # A raw edge is identified by source trajectory, start index, and
             # number of acceleration intervals to execute.
             raw = source["raw_edges"]
-            self.raw_trajectory = raw["trajectory_index"][:]
-            self.raw_start = raw["start_index"][:]
-            self.raw_num_steps = raw["num_steps"][:]
-            self.raw_length = raw["trajectory_length"][:]
+            raw_edge_count = int(raw["trajectory_index"].shape[0])
+            selected_raw_ids = None
+            if target_view is not None:
+                selected_raw_ids = np.unique(
+                    np.concatenate(
+                        (
+                            self.bundle_ids["train"].reshape(-1),
+                            self.bundle_ids["val"].reshape(-1),
+                        )
+                    )
+                )
+                # A small smoke companion should not force all 24M raw-edge
+                # records and 200k trajectories into RAM. Full companions use
+                # most of the source and retain the faster contiguous load.
+                if len(selected_raw_ids) >= 0.20 * raw_edge_count:
+                    selected_raw_ids = None
+            if selected_raw_ids is None:
+                self.raw_trajectory = raw["trajectory_index"][:]
+                self.raw_start = raw["start_index"][:]
+                self.raw_num_steps = raw["num_steps"][:]
+                self.raw_length = raw["trajectory_length"][:]
+            else:
+                self.raw_trajectory = raw["trajectory_index"][selected_raw_ids]
+                self.raw_start = raw["start_index"][selected_raw_ids]
+                self.raw_num_steps = raw["num_steps"][selected_raw_ids]
+                self.raw_length = raw["trajectory_length"][selected_raw_ids]
+                for split in ("train", "val"):
+                    self.bundle_ids[split] = np.searchsorted(
+                        selected_raw_ids, self.bundle_ids[split]
+                    )
 
             names = source["source_trajectories/trajectory_names"][:]
             decoded_names = [
                 value.decode("utf-8") if isinstance(value, bytes) else str(value)
                 for value in names
             ]
+            used_trajectory_ids = (
+                np.arange(len(decoded_names), dtype=np.int64)
+                if selected_raw_ids is None
+                else np.unique(self.raw_trajectory)
+            )
             trajectory_lengths = np.asarray(
                 [
-                    source["source_trajectories"][name]["accelerations"].shape[0]
-                    for name in decoded_names
+                    source["source_trajectories"][decoded_names[index]][
+                        "accelerations"
+                    ].shape[0]
+                    for index in used_trajectory_ids
                 ],
                 dtype=np.int64,
             )
             # Offsets make every (trajectory, timestep) pair addressable in one
             # contiguous acceleration pool without duplicating HDF5 trajectories.
-            self.trajectory_offsets = np.zeros(len(decoded_names), dtype=np.int64)
-            if len(decoded_names) > 1:
-                self.trajectory_offsets[1:] = np.cumsum(trajectory_lengths[:-1])
+            self.trajectory_offsets = np.full(
+                len(decoded_names), -1, dtype=np.int64
+            )
+            used_offsets = np.zeros(len(used_trajectory_ids), dtype=np.int64)
+            if len(used_trajectory_ids) > 1:
+                used_offsets[1:] = np.cumsum(trajectory_lengths[:-1])
+            self.trajectory_offsets[used_trajectory_ids] = used_offsets
             self.encoded_cache: dict[str, tuple[np.ndarray, np.ndarray]] = {}
             self.accelerations = np.empty(
                 (int(trajectory_lengths.sum()), ACTION_DIM), dtype=np.float32
             )
-            for index, (name, length) in enumerate(
-                zip(decoded_names, trajectory_lengths)
+            for trajectory_id, length, offset in zip(
+                used_trajectory_ids, trajectory_lengths, used_offsets
             ):
-                offset = int(self.trajectory_offsets[index])
+                name = decoded_names[int(trajectory_id)]
                 self.accelerations[offset : offset + int(length)] = source[
                     "source_trajectories"
                 ][name]["accelerations"][:]
+
+        if target_view is not None:
+            target_metadata = target_view["metadata"]
+            self.metadata.update(
+                {
+                    "cond_dim": int(target_metadata["condition_dim"]),
+                    "target_conditioning": {
+                        "format_name": target_metadata["format_name"],
+                        "format_version": target_metadata["format_version"],
+                        "condition_layout": target_metadata["condition_layout"],
+                        "relative_target_normalization": target_metadata[
+                            "relative_target_normalization"
+                        ],
+                        "target_policy": target_metadata["target_policy"],
+                        "edge_order": target_metadata["edge_order"],
+                        "target_directed_count": target_metadata[
+                            "target_directed_count"
+                        ],
+                        "source_dataset_sha256": target_metadata.get(
+                            "source_dataset_sha256"
+                        ),
+                    },
+                }
+            )
 
         norm = self.metadata["normalization"]
         self.q_range = np.asarray(norm["q_upper"], dtype=np.float32) - np.asarray(
@@ -483,7 +644,9 @@ class FrankaEdgeBundleStore:
         self.dt = float(self.metadata["dt"])
         self.max_duration = float(self.metadata["max_suffix_duration"])
         self.set_size = int(self.metadata["set_size"])
-        self.max_actions = int(np.max(self.raw_num_steps))
+        self.max_actions = int(
+            self.metadata.get("max_edge_steps", np.max(self.raw_num_steps))
+        )
         if self.max_actions != DEFAULT_MAX_ACTIONS:
             raise ValueError(
                 f"Expected {DEFAULT_MAX_ACTIONS} maximum actions, found {self.max_actions}"
@@ -503,7 +666,7 @@ class FrankaEdgeBundleStore:
         self.metadata.update(
             {
                 "edge_dim": self.edge_dim,
-                "cond_dim": 14,
+                "cond_dim": int(self.conds["train"].shape[1]),
                 "set_size": self.set_size,
                 "flow_model_architecture": (
                     "SOC 32-slot conditional Transformer with a time-conditioned "
@@ -535,7 +698,9 @@ class FrankaEdgeBundleStore:
                         "each edge equal valid-action loss weight"
                     ),
                     "canonical_order": (
-                        "lexicographic normalized delta_q, then normalized num_steps"
+                        "target-nearest first, then source canonical order"
+                        if self.preserve_bundle_order
+                        else "lexicographic normalized delta_q, then normalized num_steps"
                     ),
                 },
             }
@@ -645,14 +810,17 @@ class FrankaEdgeBundleStore:
             axis=-1,
         ).astype(np.float32, copy=False)
 
-        # The source file keeps deterministic raw-edge-ID order.  Reorder the
-        # same members geometrically so learned slots have consistent meaning.
-        keys = [step_count]
-        keys.extend(delta_q[:, :, joint] for joint in range(6, -1, -1))
-        order = np.lexsort(tuple(keys), axis=1)
-        edges = np.take_along_axis(edges, order[:, :, None], axis=1)
-        action_mask = np.take_along_axis(action_mask, order[:, :, None], axis=1)
-        action_counts = np.take_along_axis(action_counts, order, axis=1)
+        if not self.preserve_bundle_order:
+            # Legacy source files have deterministic raw-edge-ID order. Reorder
+            # them geometrically so learned slots have consistent meaning.
+            keys = [step_count]
+            keys.extend(delta_q[:, :, joint] for joint in range(6, -1, -1))
+            order = np.lexsort(tuple(keys), axis=1)
+            edges = np.take_along_axis(edges, order[:, :, None], axis=1)
+            action_mask = np.take_along_axis(action_mask, order[:, :, None], axis=1)
+            action_counts = np.take_along_axis(action_counts, order, axis=1)
+        # Target-conditioned views already store target-nearest candidates in
+        # the first slots, so re-sorting them here would erase the new signal.
         cond = self.conds[split][sample_indices]
         return cond, edges, action_mask, action_counts
 
@@ -741,6 +909,21 @@ def parse_args() -> argparse.Namespace:
         ),
     )
     parser.add_argument(
+        "--target-progress-weight",
+        type=float,
+        default=0.25,
+        help=(
+            "Weight for best-of-K normalized target-distance loss. Requires a "
+            "29D target-conditioned dataset when greater than zero."
+        ),
+    )
+    parser.add_argument(
+        "--target-recall-radius",
+        type=float,
+        default=0.40,
+        help="Normalized radius used for target recall metrics.",
+    )
+    parser.add_argument(
         "--cache-encoded-dataset",
         action=argparse.BooleanOptionalAction,
         default=True,
@@ -809,6 +992,8 @@ def apply_resume_configuration(args: argparse.Namespace) -> None:
         "sample_every": ("--sample-every",),
         "sample_steps": ("--sample-steps",),
         "padded_action_weight": ("--padded-action-weight",),
+        "target_progress_weight": ("--target-progress-weight",),
+        "target_recall_radius": ("--target-recall-radius",),
         "max_train_batches": ("--max-train-batches",),
         "max_val_batches": ("--max-val-batches",),
         "cache_encoded_dataset": (
@@ -832,6 +1017,8 @@ def apply_resume_configuration(args: argparse.Namespace) -> None:
         "time_embed_dim",
         "cond_embed_dim",
         "padded_action_weight",
+        "target_progress_weight",
+        "target_recall_radius",
         "max_train_batches",
     }
     for field, names in options.items():
@@ -910,6 +1097,42 @@ def cosine_schedule_factor(
 # ---------------------------------------------------------------------------
 
 
+def target_condition_metrics(
+    estimated_edges: torch.Tensor,
+    cond: torch.Tensor,
+    *,
+    action_block_dim: int,
+    recall_radius: float,
+) -> tuple[torch.Tensor, torch.Tensor]:
+    """Return best-of-K target distance and recall for a 29D condition.
+
+    Edge deltas use half the normalized-state scale used by the target
+    condition, hence the factor of two. Goal-mode rows ignore velocity exactly
+    like the Franka planner's position-only goal test.
+    """
+    if cond.ndim != 2 or cond.shape[1] != 29:
+        raise ValueError(
+            "Target-aware training requires condition shape (B,29): current "
+            "state, relative target, and goal-mode flag"
+        )
+    target_relative = cond[:, 14:28]
+    goal_mode = cond[:, 28] >= 0.5
+    edge_relative = torch.cat(
+        (
+            2.0 * estimated_edges[:, :, action_block_dim + 1 : action_block_dim + 8],
+            2.0 * estimated_edges[:, :, action_block_dim + 8 : action_block_dim + 15],
+        ),
+        dim=2,
+    )
+    difference = edge_relative - target_relative[:, None, :]
+    difference = difference.clone()
+    difference[goal_mode, :, 7:] = 0.0
+    distances = torch.linalg.vector_norm(difference, dim=2)
+    best_distance = distances.min(dim=1).values
+    recall = (best_distance <= float(recall_radius)).to(estimated_edges.dtype)
+    return best_distance, recall
+
+
 def flow_matching_loss(
     model: nn.Module,
     edges: torch.Tensor,
@@ -919,6 +1142,8 @@ def flow_matching_loss(
     action_block_dim: int,
     max_actions: int,
     padded_action_weight: float,
+    target_progress_weight: float,
+    target_recall_radius: float,
     generator: torch.Generator | None = None,
 ) -> tuple[torch.Tensor, dict[str, torch.Tensor]]:
     """Compute balanced conditional flow-matching loss for ragged edges.
@@ -979,15 +1204,39 @@ def flow_matching_loss(
     delta_dq_loss = squared[:, :, action_block_dim + 8 : action_block_dim + 15].mean()
     # Give the four semantic targets equal top-level influence even though
     # their raw coordinate counts differ substantially.
-    total = (
+    base_flow_loss = (
         action_loss + step_count_loss + delta_q_loss + delta_dq_loss
     ) / 4.0 + padded_action_weight * padding_loss
+    if target_progress_weight > 0.0:
+        # Under the straight flow path, x_1 = x_t + (1-t) * velocity. This
+        # converts the velocity prediction into an estimated clean edge set so
+        # target progress can supervise the generated outcome, not just the
+        # raw condition embedding.
+        estimated_edges = noisy_edges + (1.0 - t_view) * prediction
+        best_target_distance, target_recall = target_condition_metrics(
+            estimated_edges,
+            cond,
+            action_block_dim=action_block_dim,
+            recall_radius=target_recall_radius,
+        )
+        target_progress_loss = best_target_distance.mean()
+    else:
+        target_progress_loss = torch.zeros(
+            (), device=edges.device, dtype=edges.dtype
+        )
+        target_recall = torch.zeros(
+            (edges.shape[0],), device=edges.device, dtype=edges.dtype
+        )
+    total = base_flow_loss + target_progress_weight * target_progress_loss
     return total, {
+        "base_flow": base_flow_loss.detach(),
         "action": action_loss.detach(),
         "padding": padding_loss.detach(),
         "step_count": step_count_loss.detach(),
         "delta_q": delta_q_loss.detach(),
         "delta_dq": delta_dq_loss.detach(),
+        "target_progress": target_progress_loss.detach(),
+        "target_recall": target_recall.mean().detach(),
     }
 
 
@@ -1004,6 +1253,8 @@ def run_loader(
     action_block_dim: int,
     max_actions: int,
     padded_action_weight: float,
+    target_progress_weight: float,
+    target_recall_radius: float,
     max_batches: int | None,
     description: str,
     validation_seed: int | None = None,
@@ -1020,11 +1271,14 @@ def run_loader(
         key: 0.0
         for key in (
             "loss",
+            "base_flow",
             "action",
             "padding",
             "step_count",
             "delta_q",
             "delta_dq",
+            "target_progress",
+            "target_recall",
         )
     }
     sample_count = 0
@@ -1060,6 +1314,8 @@ def run_loader(
                     action_block_dim=action_block_dim,
                     max_actions=max_actions,
                     padded_action_weight=padded_action_weight,
+                    target_progress_weight=target_progress_weight,
+                    target_recall_radius=target_recall_radius,
                     generator=generator,
                 )
             if optimizer is not None:
@@ -1169,11 +1425,14 @@ def append_metrics(path: Path, epoch: int, train: dict, val: dict) -> None:
     """Append one epoch of overall and per-feature losses to CSV."""
     fields = [
         "loss",
+        "base_flow",
         "action",
         "padding",
         "step_count",
         "delta_q",
         "delta_dq",
+        "target_progress",
+        "target_recall",
     ]
     write_header = not path.exists()
     with path.open("a", newline="", encoding="utf-8") as stream:
@@ -1205,7 +1464,16 @@ def plot_losses(path: Path, metrics_path: Path) -> None:
     axes[0].plot(values["epoch"], values["val_loss"], label="validation")
     axes[0].set(title="Balanced flow-matching loss", xlabel="Epoch", ylabel="MSE")
     axes[0].legend()
-    for block in ("action", "padding", "step_count", "delta_q", "delta_dq"):
+    for block in (
+        "base_flow",
+        "action",
+        "padding",
+        "step_count",
+        "delta_q",
+        "delta_dq",
+        "target_progress",
+        "target_recall",
+    ):
         axes[1].plot(values["epoch"], values[f"val_{block}"], label=block)
     axes[1].set(title="Validation loss by feature block", xlabel="Epoch", ylabel="MSE")
     axes[1].legend()
@@ -1232,6 +1500,10 @@ def run_training(
         raise ValueError("Use --num-workers 0; the RAM-backed store must not be duplicated")
     if args.padded_action_weight < 0.0:
         raise ValueError("padded-action-weight must be nonnegative")
+    if args.target_progress_weight < 0.0:
+        raise ValueError("target-progress-weight must be nonnegative")
+    if args.target_recall_radius <= 0.0:
+        raise ValueError("target-recall-radius must be positive")
     if args.warmup_steps < 0:
         raise ValueError("warmup-steps must be nonnegative")
     if not 0.0 <= args.min_lr_ratio <= 1.0:
@@ -1325,6 +1597,8 @@ def run_training(
         sample_every=args.sample_every,
         sample_steps=args.sample_steps,
         padded_action_weight=args.padded_action_weight,
+        target_progress_weight=args.target_progress_weight,
+        target_recall_radius=args.target_recall_radius,
         cache_encoded_dataset=args.cache_encoded_dataset,
         cache_build_batch_size=args.cache_build_batch_size,
         amp=bool(args.amp and device.type == "cuda"),
@@ -1354,7 +1628,7 @@ def run_training(
     # One forward call predicts all 32 edge velocities for every condition.
     model = EdgeSetFlowModel(
         edge_dim=store.edge_dim,
-        cond_dim=14,
+        cond_dim=int(store.metadata["cond_dim"]),
         set_size=store.set_size,
         hidden_dim=config.hidden_dim,
         depth=config.depth,
@@ -1481,6 +1755,8 @@ def run_training(
             action_block_dim=store.action_block_dim,
             max_actions=store.max_actions,
             padded_action_weight=config.padded_action_weight,
+            target_progress_weight=config.target_progress_weight,
+            target_recall_radius=config.target_recall_radius,
             max_batches=config.max_train_batches,
             description=f"train {epoch:03d}",
             validation_seed=None,
@@ -1497,6 +1773,8 @@ def run_training(
             action_block_dim=store.action_block_dim,
             max_actions=store.max_actions,
             padded_action_weight=config.padded_action_weight,
+            target_progress_weight=config.target_progress_weight,
+            target_recall_radius=config.target_recall_radius,
             max_batches=config.max_val_batches,
             description=f"val {epoch:03d}",
             validation_seed=config.seed + 10_000,

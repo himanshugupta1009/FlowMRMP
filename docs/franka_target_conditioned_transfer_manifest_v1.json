@@ -1,0 +1,24 @@
+{
+  "package": "franka_target_conditioned_training_v1",
+  "required_files_not_stored_in_github": [
+    {
+      "filename": "franka_edge_bundle_200k_pool128_k32_n350000_max50_fullvalid.h5",
+      "bytes": 7544249212,
+      "sha256": "7444be109233803a663897d9a1f9e7c0db82568bf4f4b3e809d7faa77f8636d7",
+      "role": "Immutable controls, outcomes, raw edges, and trajectories"
+    },
+    {
+      "filename": "franka_edge_bundle_200k_pool128_k32_n350000_max50_targetcond_v1.h5",
+      "bytes": 139676889,
+      "sha256": "f935ff3a793638b50af631fff06428c0d496140dc8e2d9387960f23649368823",
+      "role": "29D conditions, goal modes, targets, base indices, and edge orders"
+    }
+  ],
+  "required_destination": "dataset/franka_eb_dataset",
+  "placement_rule": "Keep both HDF5 files in the same directory so the companion can resolve its immutable source by basename.",
+  "optional_verification_file": {
+    "filename": "franka_edge_bundle_200k_pool128_k32_n350000_max50_targetcond_v1.h5.audit.json",
+    "bytes": 1120,
+    "role": "Previously generated audit report; the receiving machine can regenerate it"
+  }
+}

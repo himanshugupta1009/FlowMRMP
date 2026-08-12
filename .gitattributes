@@ -1,0 +1,2 @@
+# PDF files contain byte offsets and must never undergo line-ending conversion.
+*.pdf binary
