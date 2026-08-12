@@ -39,22 +39,30 @@ def _grid_radius_query3_numba(vx, vy, vz,
     iyq = _clamp_int(iyq, 0, ny - 1)
     izq = _clamp_int(izq, 0, nz - 1)
 
-    rcell = int(np.ceil(delta / h))
-    if rcell < 0:
-        rcell = 0
+    # delta is a radius in scaled space; convert it to raw units per axis so
+    # the visited cell window covers the entire scaled-distance ball.
+    rcx = int(np.ceil(delta * sx / h))
+    rcy = int(np.ceil(delta * sy / h))
+    rcz = int(np.ceil(delta * sz / h))
+    if rcx < 0:
+        rcx = 0
+    if rcy < 0:
+        rcy = 0
+    if rcz < 0:
+        rcz = 0
 
     count = 0
 
-    for dz in range(-rcell, rcell + 1):
+    for dz in range(-rcz, rcz + 1):
         izn = izq + dz
         if izn < 0 or izn >= nz:
             continue
-        for dy in range(-rcell, rcell + 1):
+        for dy in range(-rcy, rcy + 1):
             iyn = iyq + dy
             if iyn < 0 or iyn >= ny:
                 continue
             base = nx * (iyn + ny * izn)
-            for dx in range(-rcell, rcell + 1):
+            for dx in range(-rcx, rcx + 1):
                 ixn = ixq + dx
                 if ixn < 0 or ixn >= nx:
                     continue

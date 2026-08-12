@@ -16,6 +16,10 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from franka_paths import existing_result_dir
+from franka_solution_quality import (
+    both_success_path_quality,
+    solution_quality_summary,
+)
 
 DEFAULT_VANILLA = existing_result_dir(
     "franka_vanilla_rrt", "franka_reachable_100_goal_r025_max50"
@@ -95,6 +99,7 @@ def planner_metrics(rows: list[dict[str, str]]) -> dict[str, object]:
         "planning_time_success_mean": (
             None if not successful.size else float(successful.mean())
         ),
+        "solution_quality": solution_quality_summary(rows),
     }
 
 
@@ -119,6 +124,12 @@ def paired_metrics(
             "vanilla_only_succeeded": int(np.sum(vanilla_success & ~flow_success)),
             "neither_succeeded": int(np.sum(~vanilla_success & ~flow_success)),
         },
+        "paired_solution_quality": both_success_path_quality(
+            vanilla_rows,
+            flow_rows,
+            first_name="vanilla",
+            second_name="flow_eb_rrt",
+        ),
         "final_distance": {
             "median_vanilla": float(np.median(vanilla_final)),
             "median_flow": float(np.median(flow_final)),
@@ -127,6 +138,105 @@ def paired_metrics(
             ),
             "fraction_flow_closer": float(np.mean(flow_final < vanilla_final)),
         },
+    }
+
+
+def search_workload(rows: list[dict[str, str]]) -> dict[str, float | int]:
+    """Aggregate implementation-level work performed by one planner."""
+    wall_time = float(sum(float(row["planning_time_seconds"]) for row in rows))
+    nodes = int(sum(int(row["nodes"]) for row in rows))
+    iterations = int(sum(int(row["iterations"]) for row in rows))
+    checked_waypoints = int(sum(int(row["checked_waypoints"]) for row in rows))
+    return {
+        "summed_planner_wall_time_seconds": wall_time,
+        "tree_nodes": nodes,
+        "iterations": iterations,
+        "checked_waypoints": checked_waypoints,
+        "nodes_per_planner_second": nodes / wall_time,
+        "iterations_per_planner_second": iterations / wall_time,
+        "checked_waypoints_per_planner_second": checked_waypoints / wall_time,
+        "limit_rejections": int(
+            sum(int(row["limit_rejections"]) for row in rows)
+        ),
+        "self_collision_rejections": int(
+            sum(int(row["self_collision_rejections"]) for row in rows)
+        ),
+    }
+
+
+def difficulty_success(
+    vanilla_rows: list[dict[str, str]], flow_rows: list[dict[str, str]]
+) -> dict[str, object]:
+    tiers = sorted({row.get("difficulty_tier", "unlabeled") for row in vanilla_rows})
+    result = {}
+    for tier in tiers:
+        vanilla_tier = [row for row in vanilla_rows if row.get("difficulty_tier") == tier]
+        flow_tier = [row for row in flow_rows if row.get("difficulty_tier") == tier]
+        result[tier] = {
+            "num_problems": len(vanilla_tier),
+            "vanilla_successes": int(sum(as_bool(row["success"]) for row in vanilla_tier)),
+            "flow_successes": int(sum(as_bool(row["success"]) for row in flow_tier)),
+        }
+    return result
+
+
+def initial_distance_success(
+    vanilla_rows: list[dict[str, str]], flow_rows: list[dict[str, str]]
+) -> list[dict[str, object]]:
+    bounds = (0.0, 0.4, 0.8, 1.2, 1.6, float("inf"))
+    result = []
+    for lower, upper in zip(bounds[:-1], bounds[1:]):
+        indices = [
+            index
+            for index, row in enumerate(vanilla_rows)
+            if lower < float(row["initial_normalized_distance"]) <= upper
+        ]
+        result.append(
+            {
+                "lower_exclusive": lower,
+                "upper_inclusive": None if not np.isfinite(upper) else upper,
+                "num_problems": len(indices),
+                "vanilla_successes": int(
+                    sum(as_bool(vanilla_rows[index]["success"]) for index in indices)
+                ),
+                "flow_successes": int(
+                    sum(as_bool(flow_rows[index]["success"]) for index in indices)
+                ),
+            }
+        )
+    return result
+
+
+def flow_search_profile(rows: list[dict[str, str]]) -> dict[str, float | int]:
+    keys = (
+        "flow_generation_seconds",
+        "flow_model_seconds",
+        "flow_postprocess_seconds",
+        "flow_generated_bundles",
+        "flow_generation_calls",
+        "flow_cache_hits",
+        "flow_cache_misses",
+        "flow_edge_trials",
+        "random_control_trials",
+    )
+    totals = {key: float(sum(float(row[key]) for row in rows)) for key in keys}
+    iterations = float(sum(int(row["iterations"]) for row in rows))
+    planner_time = float(sum(float(row["planning_time_seconds"]) for row in rows))
+    return {
+        **{
+            key: int(value) if key.endswith(("bundles", "calls", "hits", "misses", "trials")) else value
+            for key, value in totals.items()
+        },
+        "flow_generation_fraction_of_planner_wall_time": (
+            totals["flow_generation_seconds"] / planner_time
+        ),
+        "flow_edge_trials_per_iteration": totals["flow_edge_trials"] / iterations,
+        "random_control_trials_per_iteration": (
+            totals["random_control_trials"] / iterations
+        ),
+        "generated_bundles_per_model_call": (
+            totals["flow_generated_bundles"] / totals["flow_generation_calls"]
+        ),
     }
 
 
@@ -215,6 +325,10 @@ def main() -> None:
         raise ValueError(
             "Both planners must use the normalized 7D joint-position goal metric"
         )
+    vanilla_scene_model = vanilla_summary["configuration"].get("scene_model")
+    flow_scene_model = flow_summary["configuration"].get("scene_model")
+    if vanilla_scene_model != flow_scene_model:
+        raise ValueError("Planner results use different collision scenes")
     if any(
         not np.isclose(float(row["goal_radius"]), vanilla_goal_radius)
         for row in vanilla_rows
@@ -294,6 +408,38 @@ def main() -> None:
         "witness_backed_problem_set": witness_backed,
         "difficulty_tier_counts": tier_counts,
         **paired_all,
+        "outcome_problem_ids": {
+            "vanilla_only": [
+                problem_id
+                for problem_id, vanilla_ok, flow_ok in zip(
+                    problem_ids, vanilla_success, flow_success
+                )
+                if vanilla_ok and not flow_ok
+            ],
+            "flow_only": [
+                problem_id
+                for problem_id, vanilla_ok, flow_ok in zip(
+                    problem_ids, vanilla_success, flow_success
+                )
+                if flow_ok and not vanilla_ok
+            ],
+            "neither": [
+                problem_id
+                for problem_id, vanilla_ok, flow_ok in zip(
+                    problem_ids, vanilla_success, flow_success
+                )
+                if not vanilla_ok and not flow_ok
+            ],
+        },
+        "success_by_difficulty": difficulty_success(vanilla_rows, flow_rows),
+        "success_by_initial_distance": initial_distance_success(
+            vanilla_rows, flow_rows
+        ),
+        "search_workload": {
+            "vanilla": search_workload(vanilla_rows),
+            "flow_eb_rrt": search_workload(flow_rows),
+        },
+        "flow_search_profile": flow_search_profile(flow_rows),
         "nontrivial_start_subset": {
             "excluded_initially_satisfied_problem_ids": initially_satisfied_ids,
             **paired_metrics(
@@ -321,7 +467,13 @@ def main() -> None:
                 else "The A-B endpoints come from dataset200k support."
             ),
             "The source trajectories also supplied the flow-training corpus, so this remains an in-distribution planning benchmark rather than unseen-trajectory generalization.",
-            "Both planners use the same PyBullet proxy URDF with fixed gripper origins at y=+/-0.065 m; this differs from the CuRobo source robot's +/-0.04 m gripper geometry but keeps the paired comparison controlled.",
+            (
+                "Both planners use the same MorphIt sphere model and the same "
+                "static cuRobo obstacle scene."
+                if flow_scene_model is not None
+                else "Both planners use the same MorphIt sphere model generated "
+                "from the project's exact Panda collision meshes and SRDF exclusions."
+            ),
         ],
     }
     tuning_ids = set(TUNING_PROBLEM_IDS)

@@ -1,0 +1,104 @@
+{
+  "configuration": {
+    "created_utc": "2026-08-12T19:50:00.269509+00:00",
+    "planning_time_seconds_total_per_four_arm_trial": 30.0,
+    "goal_radius": 0.4,
+    "num_evaluation_seeds": 20,
+    "seed_base": 2026082200,
+    "coordinations": [
+      "prioritized"
+    ],
+    "base_planners": [
+      "flow"
+    ],
+    "problem_ids": [
+      0,
+      1,
+      2
+    ],
+    "dataset": "C:\\Users\\sodan\\Downloads\\dataset200k.h5",
+    "dataset_sha256": "8af36a91b832fe52f12d25ec38dec605525e669e2f97c1573ca2feee5de89d92",
+    "problems": "C:\\Projects\\FrankaFM\\results\\franka_obstacle\\four_franka_multi_planner_problems_final_v3_20260812\\four_franka_easy_medium_hard.npz",
+    "problems_sha256": "ab2902605e87a0ee85d8ca26bf2420ee208bddacc815ea97c8a5b435188bb55b",
+    "checkpoint": "C:\\Projects\\FrankaFM\\checkpoints\\franka_edge_flow\\franka_edge_flow_k32_200k_pool128_n350000_max50_fullvalid_mps_v1\\best_inference.pt",
+    "checkpoint_sha256": "42415cad616ba0cce6cb8ba0dbddea094c00bc5516d5aeae983d1522ae95bf49",
+    "flow_near_goal_policy": {
+      "activation": "goal-biased query with parent distance <= 1.25 * goal radius",
+      "independent_bundles": 4,
+      "edges_per_bundle": 32,
+      "total_candidate_edges": 128,
+      "ranking": "physical intermediate 7D q distance",
+      "goal_candidate_order": "earliest goal-region entry first",
+      "fallback": "original 32-edge ranking, then short random control"
+    },
+    "collision_backend": "cuRobo API + exact batched 295-sphere world overlap",
+    "pybullet_used": false
+  },
+  "trial_count": 60,
+  "aggregate": [
+    {
+      "coordination": "prioritized",
+      "base_planner": "flow",
+      "difficulty": "easy",
+      "trials": 20,
+      "successes": 14,
+      "success_percent": 70.0,
+      "successful_planning_mean_seconds": 3.572266621428883,
+      "successful_planning_median_seconds": 3.439231150001433,
+      "successful_path_makespan_mean_seconds": 0.6871428571428572,
+      "successful_path_makespan_median_seconds": 0.58,
+      "all_trial_tree_nodes_total": 11478,
+      "all_trial_checked_waypoints_total": 377537,
+      "successful_tree_nodes_mean": 98.78571428571429,
+      "successful_checked_waypoints_mean": 3736.4285714285716
+    },
+    {
+      "coordination": "prioritized",
+      "base_planner": "flow",
+      "difficulty": "medium",
+      "trials": 20,
+      "successes": 5,
+      "success_percent": 25.0,
+      "successful_planning_mean_seconds": 17.61902122000174,
+      "successful_planning_median_seconds": 17.34826140000223,
+      "successful_path_makespan_mean_seconds": 8.292,
+      "successful_path_makespan_median_seconds": 8.02,
+      "all_trial_tree_nodes_total": 31231,
+      "all_trial_checked_waypoints_total": 1058448,
+      "successful_tree_nodes_mean": 692.4,
+      "successful_checked_waypoints_mean": 27444.4
+    },
+    {
+      "coordination": "prioritized",
+      "base_planner": "flow",
+      "difficulty": "hard",
+      "trials": 20,
+      "successes": 0,
+      "success_percent": 0.0,
+      "successful_planning_mean_seconds": null,
+      "successful_planning_median_seconds": null,
+      "successful_path_makespan_mean_seconds": null,
+      "successful_path_makespan_median_seconds": null,
+      "all_trial_tree_nodes_total": 47312,
+      "all_trial_checked_waypoints_total": 1486531,
+      "successful_tree_nodes_mean": null,
+      "successful_checked_waypoints_mean": null
+    },
+    {
+      "coordination": "prioritized",
+      "base_planner": "flow",
+      "difficulty": "all",
+      "trials": 60,
+      "successes": 19,
+      "success_percent": 31.666666666666668,
+      "successful_planning_mean_seconds": 7.268780989474372,
+      "successful_planning_median_seconds": 4.421442600003502,
+      "successful_path_makespan_mean_seconds": 2.688421052631579,
+      "successful_path_makespan_median_seconds": 0.6,
+      "all_trial_tree_nodes_total": 90021,
+      "all_trial_checked_waypoints_total": 2922516,
+      "successful_tree_nodes_mean": 255.0,
+      "successful_checked_waypoints_mean": 9975.368421052632
+    }
+  ]
+}

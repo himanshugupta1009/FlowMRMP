@@ -92,7 +92,7 @@ class ConstrainedCRRT(CRRT, ConstrainedRRT):
                                 reached_goal_function=reached_goal_function)
         CRRT.__init__(self, *args, **kwargs)
 
-        self.prune_tree = False # pruning not supported for constrained cRRTs yet
+        self.reuse_tree = False  # Tree reuse is not supported for constrained cRRTs yet.
     
     def extend_tree(self, *args, **kwargs):
         return CRRT.extend_tree(self, *args, **kwargs)
@@ -119,7 +119,7 @@ class ConstrainedEdgeBundleType2CRRT(CRRT_EBType2, ConstrainedRRT):
                                 reached_goal_function=reached_goal_function)
         CRRT_EBType2.__init__(self, *args, **kwargs)
 
-        self.prune_tree = False # pruning not supported for constrained cRRTs yet
+        self.reuse_tree = False  # Tree reuse is not supported for constrained cRRTs yet.
     
     def extend_tree(self, *args, **kwargs):
         return CRRT_EBType2.extend_tree(self, *args, **kwargs)
@@ -143,7 +143,7 @@ class ConstrainedKinoTIEBCRRT(KinoTIEBCRRT, ConstrainedRRT):
                                 reached_goal_function=reached_goal_function)
         KinoTIEBCRRT.__init__(self, *args, **kwargs)
 
-        self.prune_tree = False # pruning not supported for constrained cRRTs yet
+        self.reuse_tree = False  # Tree reuse is not supported for constrained cRRTs yet.
     
     def extend_tree(self, *args, **kwargs):
         return KinoTIEBCRRT.extend_tree(self, *args, **kwargs)

@@ -89,7 +89,7 @@ for seed_index in range(len(seeds)):
                 rng_seed = s,
                 print_logs=True,
                 debug_flag=False,
-                prune_tree=True,
+                reuse_tree=True,
                 )
     t = time.time()  
     path_found, paths, cost, delta_t = kcbs_planner.plan_multi_agent_paths()

@@ -330,6 +330,7 @@ class DbRRTPlanner(RRT):
             target_state,
             self.motion_primitives.start_states,
             self.motion_primitives.final_states,
+            self.motion_primitives.timesteps,
             edge_ids,
             edge_mask,
             self.distance_array,
@@ -520,7 +521,6 @@ class DbRRTPlanner(RRT):
 
         curr_num_steps = 0
         start_time = time.time()
-        _, best_goal_dist = self.reached_goal(self.start, self.goal, self.goal_radius, self.agent)
 
         while curr_num_steps < self.max_iter:
             if time.time() - start_time >= self.planning_time:
@@ -536,9 +536,6 @@ class DbRRTPlanner(RRT):
             )
 
             if new_node_id is not None:
-                new_node = self.tree.nodes[new_node_id]["value"]
-                _, goal_dist = self.reached_goal(new_node.state, self.goal, self.goal_radius, self.agent)
-                best_goal_dist = min(best_goal_dist, goal_dist)
                 if self.path_found:
                     break
 

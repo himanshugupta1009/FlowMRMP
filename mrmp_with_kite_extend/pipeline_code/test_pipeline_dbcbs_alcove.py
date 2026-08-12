@@ -169,4 +169,4 @@ for num_agents in [2]:
     # instantiate test pipelines 
     tp = TestPipelineDbaSwap(test_classes, agent_builders, test_rounds=10, num_agents=num_agents, master_seed=num_agents*100)
     tp.run()
-    tp.print_stats(filename="test_results/dbcbs_alcove_gr02", plots=True)
+    tp.print_stats(filename="paper_results/dbcbs_alcove_gr02", plots=True)

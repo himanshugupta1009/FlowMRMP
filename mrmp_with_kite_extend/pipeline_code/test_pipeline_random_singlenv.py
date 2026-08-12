@@ -121,7 +121,7 @@ if __name__ == "__main__":
     planning_time = 300.0
     num_agents = 10
     for gr in [2.]:
-        savepath = "test_results/ourrandom_test_results/SINGLE_ENV_a" + str(num_agents) + "_gr" + str(gr)
+        savepath = "paper_results/ourrandom_test_results/SINGLE_ENV_a" + str(num_agents) + "_gr" + str(gr)
         os.makedirs(savepath, exist_ok=True) 
         # collect test classes
         test_classes =  [KcbsEbTestClass(max_planning_time=planning_time), 

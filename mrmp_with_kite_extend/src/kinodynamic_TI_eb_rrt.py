@@ -1,5 +1,6 @@
 from rrt import *
-from utils import check_dynamic_collisions_to_end, check_dynamic_collisions_to_end_3d
+from utils import check_dynamic_collisions_to_end, check_dynamic_collisions_to_end_3d, \
+    fill_geometric_rank_schedule
 
 
 class KinoTIEBTreeNode:
@@ -34,6 +35,8 @@ class KinoTIEBRRT(RRT):
                     sort_edges_function,
                     max_num_edges_per_node=1000,
                     num_skip_edges=10,
+                    rank_candidates=True,
+                    use_geometric_candidate_schedule=True,
                     num_random_edges=1, #Corresponds to num_extension_trials in the main RRT loop
                     epsilon_random=0.01,
                     eb_kd_tree,
@@ -74,10 +77,19 @@ class KinoTIEBRRT(RRT):
         self.epsilon_random = epsilon_random
         self.num_random_edges = num_random_edges
         self.num_skip_edges = num_skip_edges
+        self.rank_candidates = rank_candidates
+        self.use_geometric_candidate_schedule = bool(
+            use_geometric_candidate_schedule)
+        self.geometric_rank_buffer = np.empty(
+            self.num_skip_edges, dtype=np.int64)
         self.max_num_edges_per_node = max_num_edges_per_node
         self.distance_array = np.zeros((self.max_num_edges_per_node,), dtype=np.float64)
         self.random_indices = np.zeros((self.num_random_edges,), dtype=np.int64)
         self.translate = translate_function
+        # The caller pairs rank_candidates=True with the agent's ranking
+        # callback and rank_candidates=False with no_sorting_kd_tree_edges.
+        # The geometric and linear traversal schedules can operate over either
+        # resulting candidate order.
         self.sort_edges = sort_edges_function
         self.node_class = KinoTIEBTreeNode
 
@@ -214,26 +226,11 @@ class KinoTIEBRRT(RRT):
 
         action = self.agent.get_random_action(self.rng)
         timestep = self.get_time()
-        num_record_steps = max(1, round(timestep / self.minimum_time_step))
+        num_record_steps = round(timestep / self.minimum_time_step)
 
         # Propagate dynamics
         new_state, path_to_new_state = self.agent.get_next_state(parent_node.state,
                                 action, timestep, num_steps=num_record_steps)
-        step_time = float(timestep) / len(path_to_new_state)
-        goal_index = next(
-            (
-                index
-                for index, state in enumerate(path_to_new_state)
-                if self.reached_goal(
-                    state, self.goal, self.goal_radius, self.agent
-                )[0]
-            ),
-            None,
-        )
-        if goal_index is not None:
-            path_to_new_state = path_to_new_state[: goal_index + 1]
-            timestep = float((goal_index + 1) * step_time)
-            new_state = path_to_new_state[-1]
 
         # Collision check
         accept_new_node = self.isvalid(path_to_new_state, self.agent.radius, self.env.size,
@@ -242,7 +239,7 @@ class KinoTIEBRRT(RRT):
                         self.agent.dynamic_limit_values, self.env.obstacle_buffer,
                         self.dynamic_agent_clearance,
                         self.env.boundary_buffer, parent_node.time_elapsed,
-                        timestep, step_time)
+                        timestep, self.minimum_time_step)
 
         if not accept_new_node:
             if self.debug_flag:
@@ -251,7 +248,7 @@ class KinoTIEBRRT(RRT):
             return False
 
         # Check goal at the final state
-        reached_goal_flag, _ = self.reached_goal(new_state, self.goal,
+        reached_goal_flag, goal_distance = self.reached_goal(new_state, self.goal,
                             self.goal_radius, self.agent)
 
         if reached_goal_flag:
@@ -282,8 +279,44 @@ class KinoTIEBRRT(RRT):
 
                 return True
 
-        # Otherwise: valid transit node, or a reached state that cannot be
-        # parked safely because of a dynamic obstacle.
+        # Check if we hit the goal along the path
+        if not reached_goal_flag and goal_distance < self.threshold:
+            total_elapsed_time = parent_node.time_elapsed
+            for index, intermediate_state in enumerate(path_to_new_state):
+                total_elapsed_time += self.minimum_time_step
+                goal_flag, d = self.reached_goal(intermediate_state, self.goal,
+                            self.goal_radius, self.agent)
+                if goal_flag:
+                    if self.dynamic_col_checker_to_end(intermediate_state, self.agent.radius,
+                                        self.dynamic_agent_obstacles,
+                                        self.dynamic_agent_clearance,
+                                        total_elapsed_time,
+                                        self.minimum_time_step):
+                        if self.debug_flag:
+                            print(f"{debug_prefix}Intermediate goal state will collide with high-priority agent. Trying again!")
+                        continue
+                    modified_edge_time = total_elapsed_time - parent_node.time_elapsed
+                    new_path_to_new_state = path_to_new_state[:index + 1]
+
+                    edge_cost = self.cost(self.env,self.agent,parent_node.state,
+                                action,modified_edge_time,new_path_to_new_state)
+                    total_cost = parent_node.cost_so_far + edge_cost
+
+                    new_node_id = self.add_rrt_node(intermediate_state,
+                        parent_node_id,action,modified_edge_time,
+                        new_path_to_new_state,total_elapsed_time,total_cost)
+
+                    self.path_found = True
+                    self.goal_node_id = new_node_id
+                    self.path_cost = total_cost
+                    self.path_time = total_elapsed_time
+
+                    if self.debug_flag:
+                        print(f"{debug_prefix}Goal Reached! Path found for ", self.agent.id)
+
+                    return True
+
+        # Otherwise: valid node, no goal -> add full random-control edge
         edge_cost = self.cost(self.env, self.agent, parent_node.state,
                         action, timestep, path_to_new_state)
         total_cost = parent_node.cost_so_far + edge_cost
@@ -315,29 +348,57 @@ class KinoTIEBRRT(RRT):
             # Edges have not been found before for this node.
             query = self.get_eb_kd_tree_query(parent_node.state)
             edge_ids = self.eb_kd_tree.radius_query(query, self.kd_tree_delta_radius)
-            l = min(len(edge_ids), self.max_num_edges_per_node)
-            parent_node.edge_bundle_indices = edge_ids[:l]
-            parent_node.edge_bundle_mask = np.full((l,), False, dtype=bool)
+            if len(edge_ids) > self.max_num_edges_per_node:
+                # Radius-query results have a structured KD-index order. Draw a
+                # uniform subset only when the per-node cache cap is exceeded.
+                edge_ids = self.rng.choice(
+                    edge_ids,
+                    size=self.max_num_edges_per_node,
+                    replace=False,
+                )
+            # An uncapped, unranked query keeps one randomized candidate order
+            # for this node.  A capped query is already randomized by choice.
+            elif not self.rank_candidates and len(edge_ids) > 1:
+                self.rng.shuffle(edge_ids)
+            parent_node.edge_bundle_indices = edge_ids
+            parent_node.edge_bundle_mask = np.full(
+                (len(edge_ids),), False, dtype=bool)
 
         # Keeps track of all the edges from the bundle available for this node
         curr_edge_indices = parent_node.edge_bundle_indices
         # Keeps track of which edges have already been tried for this node
         curr_edge_mask = parent_node.edge_bundle_mask
 
-        sorted_indices, num_valid_edges = self.sort_edges(parent_node.state,
-            random_point, eb.start_states, eb.final_states, curr_edge_indices,
+        order, num_valid_edges = self.sort_edges(
+            parent_node.state, random_point, eb.start_states,
+            eb.final_states, eb.timesteps, curr_edge_indices,
             curr_edge_mask, self.distance_array)
 
-        p = max(1, num_valid_edges // num_samples)
-        # 1) Greedy / sorted pass over valid edges, skipping every p-th
-        for idx in range(0, num_valid_edges, p):
-            x = sorted_indices[idx]     # index into curr_edge_indices / mask
-            edge_bundle_index = curr_edge_indices[x]
+        if self.use_geometric_candidate_schedule:
+            rank_count = fill_geometric_rank_schedule(
+                num_valid_edges, num_samples, self.geometric_rank_buffer)
+            candidate_ranks = self.geometric_rank_buffer[:rank_count]
 
-            if self._try_edge_from_bundle(edge_bundle_index,
-                parent_node, parent_node_id, x, curr_edge_mask,
-                debug_prefix="[sorted] "):
-                return  # node added
+            for rank_index in range(rank_count):
+                x = order[candidate_ranks[rank_index]]
+                edge_bundle_index = curr_edge_indices[x]
+                if self._try_edge_from_bundle(
+                        edge_bundle_index, parent_node, parent_node_id, x,
+                        curr_edge_mask,
+                        debug_prefix="[geometric schedule] "):
+                    return
+        else:
+            p = max(1, num_valid_edges // num_samples)
+            # Linear-stride pass over the candidate order, visiting every
+            # p-th candidate.
+            for idx in range(0, num_valid_edges, p):
+                x = order[idx]
+                edge_bundle_index = curr_edge_indices[x]
+
+                if self._try_edge_from_bundle(
+                        edge_bundle_index, parent_node, parent_node_id, x,
+                        curr_edge_mask, debug_prefix="[linear schedule] "):
+                    return
 
         for _ in range(self.num_random_edges):
             if self._try_random_control(parent_node, parent_node_id,

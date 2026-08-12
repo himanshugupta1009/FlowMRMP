@@ -1,0 +1,59 @@
+{
+  "coordination": "kcbs",
+  "base_planner": "flow",
+  "problem_id": 2,
+  "difficulty": "hard",
+  "trial_seed": 2026082203,
+  "success": false,
+  "planner_solved": false,
+  "audit_passed": false,
+  "planning_time_seconds": 30.037408299998788,
+  "path_makespan_seconds": null,
+  "path_mean_agent_time_seconds": null,
+  "path_cost": null,
+  "tree_nodes": 3062,
+  "high_level_nodes": 1,
+  "iterations": 16,
+  "checked_waypoints": 92756,
+  "per_agent_path_times_seconds": [],
+  "audit": {
+    "reason": "planner_failed"
+  },
+  "generations": [],
+  "planner_profile": {
+    "cbs_nodes": 1,
+    "conflict_counts": [
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ],
+      [
+        0,
+        0,
+        0,
+        0
+      ]
+    ]
+  },
+  "flow_generator_profile": {
+    "samples": 2946,
+    "sample_total_s": 11.064784100024553,
+    "model_s": 10.59483689996705,
+    "postprocess_s": 0.4247501000354532
+  },
+  "completed_utc": "2026-08-12T17:08:51.353931+00:00"
+}

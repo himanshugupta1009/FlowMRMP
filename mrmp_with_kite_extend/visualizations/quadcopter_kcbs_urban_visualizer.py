@@ -141,7 +141,7 @@ def build_rrt_planner(start, goal, goal_radius, agent, env, rng_seed=None):
         random_point_function=agent.get_random_point_3d,
         reached_goal_function=agent.agent_reached_goal,
         udf_seed=seed,
-        prune_tree=True,
+        reuse_tree=True,
     )
 
 
@@ -159,7 +159,7 @@ def plan_kcbs_paths(env, agents, starts, goals, goal_radius, rng_seed=19):
         rng_seed=rng_seed,
         print_logs=False,
         debug_flag=False,
-        prune_tree=True,
+        reuse_tree=True,
     )
 
     path_found, paths, cost, elapsed = kcbs_planner.plan_multi_agent_paths()

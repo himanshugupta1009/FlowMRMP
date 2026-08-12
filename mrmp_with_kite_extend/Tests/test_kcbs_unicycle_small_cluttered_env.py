@@ -13,30 +13,71 @@ from mapf_env_square_agent_unicycle import (
 from printer import *
 
 starts = [
-            (1.0, 1.0, 0.0),    # red
-            (6.0, 5.0, 0.0),    # teal
-            (12.0, 5.0, 0.0),   # blue
-            (14.0, 4.0, 0.0),   # green
-            (9.0, 10.0, 0.0),   # magenta
-            (3.0, 11.0, 0.0),   # red/orange
-            (6.0, 14.0, 0.0),   # green (top)
-            (8.0, 5.0, 0.0),    # purple
-            (10.0, 1.0, 0.0),   # yellow
-            (11.0, 14.0, 0.0),  # blue (top)
-        ]
+    (1.0, 1.0, 0.0),
+    (6.0, 5.0, 0.0),
+    (12.0, 5.0, 0.0),
+    (14.0, 4.0, 0.0),
+    (9.0, 10.0, 0.0),
+    (3.0, 11.0, 0.0),
+    (6.0, 14.0, 0.0),
+    (8.0, 5.0, 0.0),
+    (10.0, 1.0, 0.0),
+    (11.0, 14.0, 0.0),
+    (13.0, 10.0, 0.0),
+    (4.0, 8.0, 0.0),
+    (9.0, 7.0, 0.0),
+    (8.0, 12.0, 0.0),
+    (1.0, 6.0, 0.0),
+    (14.0, 12.0, 0.0),
+    (4.0, 3.0, 0.0),
+    (14.0, 1.0, 0.0),
+    (6.0, 8.0, 0.0),
+    (7.0, 1.0, 0.0),
+    (2.5, 2.5, 0.0),
+    (11.0, 1.0, 0.0),
+    (1.0, 14.0, 0.0),
+    (12.0, 9.5, 0.0),
+    (5.5, 10.0, 0.0),
+    (9.5, 13.5, 0.0),
+    (14.0, 6.0, 0.0),
+    (5.0, 6.5, 0.0),
+    (11.5, 6.5, 0.0),
+    (2.8, 7.2, 0.0)
+
+]
 
 goals = [
-            (6.0, 3.0),     # red
-            (2.0, 11.0),    # teal
-            (5.0, 12.0),    # blue
-            (9.0, 1.0),     # green
-            (14.0, 3.0),    # magenta
-            (12.0, 12.0),   # red/orange
-            (3.0, 7.0),     # green (top)
-            (13.0, 6.0),    # purple
-            (11.0, 8.0),    # yellow
-            (3.0, 14.0),    # blue (top)
-        ]
+    (6.0, 3.0),
+    (2.0, 11.0),
+    (5.0, 12.0),
+    (9.0, 1.0),
+    (14.0, 3.0),
+    (12.0, 12.0),
+    (3.0, 7.0),
+    (13.0, 6.0),
+    (11.0, 8.0),
+    (3.0, 14.0),
+    (12.0, 3.0),
+    (1.0, 3.0),
+    (5.0, 9.0),
+    (4.0, 5.0),
+    (10.0, 6.0),
+    (8.0, 3.0),
+    (6.0, 11.0),
+    (9.0, 8.0),
+    (10.0, 12.0),
+    (3.0, 9.0),
+    (13.8, 11.0),
+    (2.5, 6.0),
+    (11.5, 13.5),
+    (5.5, 4.0),
+    (14.0, 5.0),
+    (1.2, 13.8),
+    (6.2, 6.2),
+    (12.2, 7.0),
+    (3.5, 10.8),
+    (8.8, 4.8)
+]
 
 
 obstacles = [
@@ -65,10 +106,10 @@ obstacles = [
             RectangleObstacle2D(13.0, 14.0, 2, 2),
         ]
 
-env = SquareEnvironment(15.0, 15.0, obstacles)
+env = SquareEnvironment(15.0, 15.0, obstacles, obs_buffers=False)
 
-num_agents = 5
-goal_radius = 1.0
+num_agents = 10
+goal_radius = 0.5
 
 
 agent_ids = []
@@ -79,22 +120,25 @@ for agent_id in range(num_agents):
 
 planners = []
 planner_function = get_rrt_planner
-# planner_function = get_eb_rrt_planner
+planner_function = get_eb_rrt_planner
 planner_function = get_kino_TI_eb_rrt_planner_unicycle
-# planner_function = get_constrained_db_rrt_planner_unicycle
+planner_function = get_constrained_db_rrt_planner_unicycle
 for i in range(num_agents):
-    planners.append(planner_function(starts[i],goals[i],goal_radius,agents[i],env))
+    planners.append(planner_function(starts[i],goals[i],goal_radius,
+                                     agents[i],env))
+                                    #  agents[i], env, use_optimizer=False))
 
 s = np.random.randint(0, 1000)
 print("RNG Seed: ", s)
+#Seeds with which KCBS with KiTE succeeded for 25 agents: 511
 kcbs_planner = KCBS(
                     env = env,
                     agents = agents,
                     low_level_planners = planners,
                     max_trials = 10000,
-                    planning_time = 600.0,
+                    planning_time = 300.0,
                     rng_seed = s,
-                    print_logs=False,
+                    print_logs=True,
                     debug_flag=False
                     )
 t = time.time()

@@ -24,4 +24,18 @@ logs.txt
 check*.png
 visualizations/__pycache__/
 new_format_motions/
-test_results/
+paper_results/
+# MRMP/dbRRT scratch artifacts
+mrmp_tmp/
+/tmp_*.yaml
+/out_dbrrt.yaml
+brad_plots/
+edge_bundles_unclamped/eb_second_order_car_kinodynamic_TI_edges_100000_L_0p7.npz
+/paper_plots/csvs/
+/paper_plots/data/
+/paper_plots/figures/
+/edge_bundles/*.npz
+/edge_bundles_unclamped/
+/motion_primitives/
+/media/
+/pipeline_code/generated_dbcbs_checks/

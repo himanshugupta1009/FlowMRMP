@@ -146,6 +146,43 @@ def find_roundoff_decimal_digits(x):
         return l
 
 
+GEOMETRIC_RANK_PREFIX = np.array(
+    [0, 1, 2, 4, 8, 16, 32, 64, 128, 256, 512, 1024, 2048,
+     4096, 8192, 16384, 32768, 65536, 131072, 262144, 524288,
+     1048576],
+    dtype=np.int64,
+)
+GEOMETRIC_RANK_PREFIX.flags.writeable = False
+
+
+@njit
+def fill_geometric_rank_schedule(num_valid_edges, max_attempts, rank_buffer):
+    """
+    Fill a preallocated buffer with geometric ranks and return its used length.
+    The final slot contains the last valid rank when at least two attempts are
+    available; a one-attempt schedule selects the best candidate at rank zero.
+    """
+    if num_valid_edges <= 0 or max_attempts <= 0:
+        return 0
+
+    if max_attempts == 1:
+        rank_buffer[0] = 0
+        return 1
+
+    final_rank = num_valid_edges - 1
+    write_index = 0
+    max_prefix_entries = max_attempts - 1
+
+    while (write_index < len(GEOMETRIC_RANK_PREFIX)
+            and write_index < max_prefix_entries
+            and GEOMETRIC_RANK_PREFIX[write_index] < final_rank):
+        rank_buffer[write_index] = GEOMETRIC_RANK_PREFIX[write_index]
+        write_index += 1
+
+    rank_buffer[write_index] = final_rank
+    return write_index + 1
+
+
 @njit
 def squared_distance_numba(a, b):
     acc = 0.0

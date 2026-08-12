@@ -38,10 +38,12 @@ PLANNER_RESULTS_ROOT = {
 }
 PLANNER_LABEL = {"flow": "FlowEBRRT", "vanilla": "VanillaRRT"}
 
-if str(FLOWMRMP_SRC) not in sys.path:
-    sys.path.insert(0, str(FLOWMRMP_SRC))
+MAIN_SCRIPTS = Path(__file__).resolve().parents[1]
+for module_path in (MAIN_SCRIPTS, FLOWMRMP_SRC):
+    if str(module_path) not in sys.path:
+        sys.path.insert(0, str(module_path))
 
-from Agents.FrankaPanda import FrankaSelfCollisionChecker  # noqa: E402
+from FrankaPanda import FrankaPyBulletCollisionChecker  # noqa: E402
 
 
 def parse_args() -> argparse.Namespace:
@@ -93,14 +95,14 @@ def select_problem(results_dir: Path, requested_id: int | None) -> int:
     return int(min(rows, key=lambda row: float(row["final_normalized_distance"]))["problem_id"])
 
 
-def find_link_index(checker: FrankaSelfCollisionChecker, name: str) -> int:
+def find_link_index(checker: FrankaPyBulletCollisionChecker, name: str) -> int:
     if name not in checker.link_indices:
         raise KeyError(f"Link {name!r} not found in Panda URDF")
     return checker.link_indices[name]
 
 
 def end_effector_positions(
-    checker: FrankaSelfCollisionChecker, states: np.ndarray, link_index: int
+    checker: FrankaPyBulletCollisionChecker, states: np.ndarray, link_index: int
 ) -> list[tuple[float, float, float]]:
     points = []
     for state in states:
@@ -111,7 +113,7 @@ def end_effector_positions(
 
 
 def draw_path(
-    checker: FrankaSelfCollisionChecker, points: list[tuple[float, float, float]]
+    checker: FrankaPyBulletCollisionChecker, points: list[tuple[float, float, float]]
 ) -> None:
     # Cap the number of visible bodies for long paths while keeping endpoints.
     if len(points) > 251:
@@ -169,7 +171,7 @@ def draw_path(
         )
 
 
-def save_camera_image(checker: FrankaSelfCollisionChecker, path: Path) -> None:
+def save_camera_image(checker: FrankaPyBulletCollisionChecker, path: Path) -> None:
     width, height = 1280, 900
     view = checker.client.computeViewMatrixFromYawPitchRoll(
         cameraTargetPosition=[0.35, 0.0, 0.45],
@@ -182,7 +184,7 @@ def save_camera_image(checker: FrankaSelfCollisionChecker, path: Path) -> None:
     projection = checker.client.computeProjectionMatrixFOV(
         fov=55.0, aspect=width / height, nearVal=0.05, farVal=4.0
     )
-    _, _, rgba, _, _ = checker.client.getCameraImage(
+    image_width, image_height, rgba, _, _ = checker.client.getCameraImage(
         width,
         height,
         viewMatrix=view,
@@ -190,7 +192,10 @@ def save_camera_image(checker: FrankaSelfCollisionChecker, path: Path) -> None:
         renderer=checker.client.ER_TINY_RENDERER,
     )
     path.parent.mkdir(parents=True, exist_ok=True)
-    Image.fromarray(np.asarray(rgba, dtype=np.uint8)[..., :3]).save(path)
+    rgba_array = np.asarray(rgba, dtype=np.uint8).reshape(
+        image_height, image_width, 4
+    )
+    Image.fromarray(rgba_array[..., :3]).save(path)
 
 
 def save_state_traces(states: np.ndarray, dt: float, path: Path, title: str) -> None:
@@ -254,8 +259,11 @@ def main() -> None:
         f"({'success' if success else 'best partial'})",
     )
 
-    checker = FrankaSelfCollisionChecker(
-        args.urdf, visualize=not args.headless, load_visuals=True
+    checker = FrankaPyBulletCollisionChecker(
+        args.urdf,
+        visualize=not args.headless,
+        load_visuals=True,
+        suppress_output=False,
     )
     ee_link = find_link_index(checker, "panda_hand")
     points = end_effector_positions(checker, states, ee_link)

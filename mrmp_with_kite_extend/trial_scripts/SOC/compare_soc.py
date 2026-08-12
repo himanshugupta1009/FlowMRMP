@@ -70,7 +70,7 @@ for i in range(len(seeds)):
                 sampling_time_step=T_max,
                 minimum_time_step=0.1,
                 max_iter = 10000,
-                planning_time=600.0,
+                planning_time=300.0,
                 isvalid_function=agent.is_new_node_valid,
                 cost_function=agent.get_cost,
                 random_point_function=agent.get_random_point,

@@ -13,6 +13,10 @@ from db.constrained_db_optimize_unicycle import (
     optimize_dbrrt_unicycle_path as optimize_constrained_dbrrt_unicycle_path,
     UnicycleTrajOptOptions as ConstrainedUnicycleTrajOptOptions,
 )
+from db.cpp_dynoplan_optimize_unicycle import (
+    optimize_dbrrt_unicycle_path_with_cpp_dynoplan,
+    CppDynoplanUnicycleOptimizerOptions,
+)
 from motion_primitives import transform_unicycle_trajectory_numba
 
 # Old agent parameters that we used to test with
@@ -215,7 +219,10 @@ def get_kino_TI_eb_rrt_planner_unicycle(start, goal, goal_radius, agent, env,
 def get_constrained_db_rrt_planner_unicycle(
     start,goal,goal_radius,agent,env,
     primitive_file_location='motion_primitives/unicycle1_v0__ispso__2023_04_03__14_56_57.bin.im.bin.im.bin.msgpack',
-    use_optimizer=True, num_edges=30000, motion_primitive_dt=0.1):
+    use_optimizer=True, num_edges=30000, motion_primitive_dt=0.1,
+    optimizer_backend="cpp_dynoplan",
+    cpp_optimizer_options=None,
+    udf_seed=0):
 
     motion_primitives, kd_tree = load_unicycle_dbrrt_primitives(
         num_edges=num_edges,
@@ -251,17 +258,34 @@ def get_constrained_db_rrt_planner_unicycle(
         goal_expand_mode="focused",
         random_expand_mode="randomized",
         dynamic_agent_clearance=0.0,
-        udf_seed=0,  # will be overwritten by KCBS init
+        udf_seed=udf_seed,  # will be overwritten by KCBS init
         debug_flag=False,
         print_logs=False,
     )
-    if use_optimizer:
+    if use_optimizer and optimizer_backend == "python":
         planner.set_optimizer(
             lambda curr_planner: optimize_constrained_dbrrt_unicycle_path(
                 curr_planner,
-                options=ConstrainedUnicycleTrajOptOptions(allow_raw_fallback=False),
+                options=ConstrainedUnicycleTrajOptOptions(
+                    allow_raw_fallback=False,
+                    retry_on_infeasible=True,
+                    obstacle_weight=100.0,
+                    goal_weight=200.0,
+                    clearance_margin=0.02,
+                    ),
             )
         )
+    elif use_optimizer and optimizer_backend == "cpp_dynoplan":
+        if cpp_optimizer_options is None:
+            cpp_optimizer_options = CppDynoplanUnicycleOptimizerOptions()
+        planner.set_optimizer(
+            lambda curr_planner: optimize_dbrrt_unicycle_path_with_cpp_dynoplan(
+                curr_planner,
+                options=cpp_optimizer_options,
+            )
+        )
+    elif use_optimizer:
+        raise ValueError(f"Unknown optimizer_backend: {optimizer_backend}")
     return planner
     
 

@@ -6,6 +6,7 @@ from numba.typed import List
 from numba import njit, types
 
 from rrt import TreeNode, RRT, DynamicMatrix
+from utils import get_nearest_index
 from utils import get_dtype_from_input,find_roundoff_decimal_digits, \
      point_circle_collision, point_sphere_collision, euclidean_distance_numba_with_l
 
@@ -126,10 +127,14 @@ class CRRT(RRT):
                     reached_goal_function, 
                     random_point_function, 
                     udf_seed = 77, 
+                    goal_sampling_probability = 0.1,
                     dynamic_agent_clearance=0.0,
                     dynamic_obstacles = List.empty_list(types.Array(types.float64, 2, 'C')), 
                     truncate_paths = False,
                     branch_goal_parking = True,
+                    joint_state_metric_function = None,
+                    joint_path_collision_function = None,
+                    first_joint_path_collision_function = None,
                     print_logs = False,
                     debug_flag = False):
         """
@@ -214,6 +219,7 @@ class CRRT(RRT):
                          reached_goal_function=reached_goal_function[0],
                          random_point_function=random_point_function[0],
                          udf_seed=udf_seed,
+                         goal_sampling_probability=goal_sampling_probability,
                          dynamic_agent_clearance=dynamic_agent_clearance,
                          print_logs=print_logs,
                          debug_flag=debug_flag,
@@ -254,22 +260,37 @@ class CRRT(RRT):
         # Whether each agent has reached its goal, indexed by superstate order.
         self.goal_seen_by_agent = np.zeros(self.num_agents, dtype=np.bool_)
         self.get_random_point_funcs = random_point_function
+        self.joint_state_metric_function = joint_state_metric_function
+        self.joint_path_collision_function = joint_path_collision_function
+        self.first_joint_path_collision_function = first_joint_path_collision_function
+        self._last_agent_sample_was_goal = np.zeros(self.num_agents, dtype=np.bool_)
+        self._last_agent_raw_samples = [None for _ in range(self.num_agents)]
 
         # reset some things from RRT to account for the superstate. 
-        agent_position_state_dim = len(env.size)
-        if agent_position_state_dim not in (2, 3):
-            raise ValueError("CRRT only supports 2D and 3D state positions!")
-        state_distance_dim = agent_position_state_dim * len(agents)  
+        if self.joint_state_metric_function is None:
+            agent_position_state_dim = len(env.size)
+            if agent_position_state_dim not in (2, 3):
+                raise ValueError("CRRT only supports 2D and 3D state positions unless an articulated joint-state metric is supplied!")
+            state_distance_dim = agent_position_state_dim * len(agents)
+            self.agent_metric_sizes = np.full(
+                self.num_agents, agent_position_state_dim, dtype=np.int32)
+        else:
+            self.agent_metric_sizes = np.asarray(
+                [agent.distance_metric_state_size for agent in self.agents],
+                dtype=np.int32)
+            if np.any(self.agent_metric_sizes <= 0):
+                raise ValueError("Every articulated CRRT agent needs a positive metric size")
+            state_distance_dim = int(np.sum(self.agent_metric_sizes))
+            agent_position_state_dim = -1
+        self.agent_metric_starts = np.empty(self.num_agents + 1, dtype=np.int32)
+        self.agent_metric_starts[0] = 0
+        np.cumsum(self.agent_metric_sizes, out=self.agent_metric_starts[1:])
         self.distance_metric_state_size = state_distance_dim # overwrite from RRT
         self._node_matrix = DynamicMatrix(initial_capacity=1024, 
                             dim=self.distance_metric_state_size) # Overwrite from RRT
         self.agent_position_state_dim = agent_position_state_dim
-        self.goal_matrix_state = np.empty(self.distance_metric_state_size)
-        for agent_index in range(self.num_agents):
-            position_start = agent_index * self.agent_position_state_dim
-            position_end = position_start + self.agent_position_state_dim
-            self.goal_matrix_state[position_start:position_end] = (
-                self.goals[agent_index][:self.agent_position_state_dim])
+        self.goal_matrix_state = self.superstate_to_matrix_state(
+            self.agent_states_to_joint_state(self.goals))
         if truncate_paths:
             self.threshold = truncation_check_threshold * np.sqrt(self.num_agents)
         else:
@@ -325,6 +346,9 @@ class CRRT(RRT):
         joint_path[:, self.get_agent_state_slice(agent_index)] = agent_path
 
     def joint_path_collides(self, joint_path, start_index=0):
+        if self.joint_path_collision_function is not None:
+            return bool(self.joint_path_collision_function(
+                np.asarray(joint_path), int(start_index)))
         if self.agent_position_state_dim == 2:
             return _joint_path_collides_2d_numba(
                 joint_path,
@@ -340,6 +364,9 @@ class CRRT(RRT):
             start_index)
 
     def first_joint_path_collision(self, joint_path, start_index=0):
+        if self.first_joint_path_collision_function is not None:
+            return self.first_joint_path_collision_function(
+                np.asarray(joint_path), int(start_index))
         if self.agent_position_state_dim == 2:
             return _first_joint_path_collision_2d_numba(
                 joint_path,
@@ -428,6 +455,15 @@ class CRRT(RRT):
         Returns:
             np.array: vector of just each agent's position (i.e. x, y, z) 
         """
+        if self.joint_state_metric_function is not None:
+            metric = np.asarray(
+                self.joint_state_metric_function(np.asarray(superstate)),
+                dtype=np.float64)
+            if metric.shape != (self.distance_metric_state_size,):
+                raise ValueError(
+                    "Articulated CRRT metric returned shape "
+                    f"{metric.shape}, expected {(self.distance_metric_state_size,)}")
+            return metric
         return _joint_state_to_matrix_state_numba(
             superstate,self.agent_state_starts,len(self.agents),
             self.agent_position_state_dim,self.distance_metric_state_size)
@@ -457,23 +493,69 @@ class CRRT(RRT):
             list(agent_state_type): New joint state 
         """
         random_state = np.empty(self.distance_metric_state_size)
-        position_dim = self.agent_position_state_dim
-
         for agent_index in range(self.num_agents):
-            position_start = agent_index * position_dim
-            position_end = position_start + position_dim
+            position_start = self.agent_metric_starts[agent_index]
+            position_end = self.agent_metric_starts[agent_index + 1]
 
             r = self.rng.uniform(0, 1)
-            if r < 0.1 or (r < 0.7 and self.goal_seen_by_agent[agent_index]):
-                random_state[position_start:position_end] = self.goal_matrix_state[position_start:position_end]
+            goal_sample = bool(
+                r < self.goal_sampling_probability
+                or (r < 0.7 and self.goal_seen_by_agent[agent_index]))
+            self._last_agent_sample_was_goal[agent_index] = goal_sample
+            if goal_sample:
+                raw_sample = self.goals[agent_index]
             else:
-                random_state[position_start:position_end] = self.get_random_point_funcs[agent_index](
+                raw_sample = self.get_random_point_funcs[agent_index](
                     self.env,
                     self.static_circular_obstacles,
                     self.static_rectangular_obstacles,
                     self.rng)
+            self._last_agent_raw_samples[agent_index] = np.asarray(
+                raw_sample, dtype=np.float64).copy()
+            if self.joint_state_metric_function is None:
+                random_state[position_start:position_end] = np.asarray(raw_sample)[
+                    : self.agent_metric_sizes[agent_index]]
+            else:
+                random_state[position_start:position_end] = self.agents[
+                    agent_index].get_distance_metric_state(raw_sample)
         
         return random_state
+
+    def _active_metric_indices(self):
+        """Return metric columns honoring each agent's latest goal sample."""
+        columns = []
+        for agent_index, agent in enumerate(self.agents):
+            start = int(self.agent_metric_starts[agent_index])
+            size = int(self.agent_metric_sizes[agent_index])
+            if hasattr(agent, "get_parent_selection_metric_dims"):
+                size = int(agent.get_parent_selection_metric_dims(
+                    bool(self._last_agent_sample_was_goal[agent_index])))
+            columns.extend(range(start, start + size))
+        return np.asarray(columns, dtype=np.int64)
+
+    def get_nearest_node(self, random_point):
+        """Find a joint parent under the per-agent shared sampling policy."""
+        states = self._node_matrix.get_valid_matrix()
+        columns = self._active_metric_indices()
+        nearest_index = get_nearest_index(
+            states[:, columns], self._node_matrix.count,
+            np.asarray(random_point, dtype=np.float64)[columns])
+        nearest_node_id = self._node_matrix.ids[nearest_index]
+        return nearest_node_id, self.tree.nodes[nearest_node_id]['value']
+
+    def joint_extension_score(self, joint_state, random_point):
+        """Score a propagated joint endpoint with the current per-agent policy."""
+        metric = self.superstate_to_matrix_state(joint_state)
+        squared = 0.0
+        for agent_index, agent in enumerate(self.agents):
+            start = int(self.agent_metric_starts[agent_index])
+            size = int(self.agent_metric_sizes[agent_index])
+            if hasattr(agent, "get_parent_selection_metric_dims"):
+                size = int(agent.get_parent_selection_metric_dims(
+                    bool(self._last_agent_sample_was_goal[agent_index])))
+            delta = metric[start:start + size] - random_point[start:start + size]
+            squared += float(np.dot(delta, delta))
+        return float(np.sqrt(squared))
     
     def check_for_goals(self, parent_node, random_time, random_action,
                         joint_path, new_joint_state):
@@ -649,8 +731,7 @@ class CRRT(RRT):
 
             # The new joint state is valid and collision-free.
             matrix_state = self.superstate_to_matrix_state(new_joint_state)
-            score = euclidean_distance_numba_with_l(matrix_state, random_point,
-                self.distance_metric_state_size)
+            score = self.joint_extension_score(new_joint_state, random_point)
 
             if score < best_score:
                 best_score = score
@@ -865,7 +946,7 @@ class CRRT(RRT):
         # init states, controls, costs 
         for i in range(num_agents):
             state_data_type = get_dtype_from_input(self.starts[i])
-            path_states.append(np.empty((max_nodes, len(state_data_type)), dtype=np.float16))
+            path_states.append(np.empty((max_nodes, len(state_data_type)), dtype=np.float64))
             path_controls.append(np.empty((max_nodes, self.agent_action_lengths[i]), dtype=np.float64))
             path_costs.append(np.empty(max_nodes, dtype=np.float64))
 
@@ -928,6 +1009,8 @@ class CRRT(RRT):
                           np.zeros(self.num_agents, dtype=np.bool_)) # nothing has reached the goal yet
         start_time = time.time()
         while curr_num_steps<=self.max_iter:
+            if time.time() - start_time >= self.planning_time:
+                break
             # print("Iteration: ", curr_num_steps)
             
             random_point = self.sample_random_point()
@@ -943,6 +1026,8 @@ class CRRT(RRT):
 
         end_time = time.time()
         total_time = end_time - start_time
+        self.last_plan_wall_time = total_time
+        self.last_plan_iterations = curr_num_steps
         if self.print_logs: 
             print("Total Planning Time after", curr_num_steps, "steps:", total_time)
         return total_time
@@ -968,6 +1053,8 @@ class CRRT(RRT):
         curr_num_steps = 0
         start_time = time.time()
         while curr_num_steps<=self.max_iter:
+            if time.time() - start_time >= self.planning_time:
+                break
             if self.debug_flag:
                 print("*************************************")
                 print("Iteration: ", curr_num_steps)
@@ -982,6 +1069,8 @@ class CRRT(RRT):
 
         end_time = time.time()
         total_time = end_time - start_time
+        self.last_plan_wall_time = total_time
+        self.last_plan_iterations = curr_num_steps
         self.path_time = round(self.path_time, self.roundoff_digits)
 
         if self.print_logs or self.debug_flag:

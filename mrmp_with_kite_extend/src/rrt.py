@@ -93,6 +93,7 @@ class RRT:
                     random_point_function, 
                     udf_seed = 77,
                     goal_sampling_probability=0.1,
+                    use_goal_parking_fix=True,
                     dynamic_agent_clearance=0.0,
                     debug_flag = False,
                     print_logs = False, 
@@ -112,6 +113,12 @@ class RRT:
         self.planning_time = planning_time #Time to plan the path in seconds
         self.num_extension_trials = num_extension_trials #Number of trials to extend the RRT tree
         self.goal_sampling_probability = goal_sampling_probability
+        self._last_sample_was_goal = False
+        # True: a goal-reaching state is accepted only when its stationary
+        # tail is safe; otherwise, retain the valid arrival as a transit node.
+        # False: preserve the planner's legacy goal handling, which discards
+        # an endpoint that fails the existing future dynamic-obstacle check.
+        self.use_goal_parking_fix = bool(use_goal_parking_fix)
         self.dynamic_agent_clearance = dynamic_agent_clearance
         self.isvalid = isvalid_function #Function to check if the path is valid
         self.cost = cost_function #Function to calculate the cost of a edge
@@ -145,9 +152,8 @@ class RRT:
             self.distance_metric_state_size = 2
 
         if getattr(self.agent, "disable_dynamic_collision_check", False):
-            # Single-arm planning in an empty world has no moving agents to
-            # check after reaching the goal.  Static/self collision is still
-            # checked by isvalid_function at every rollout waypoint.
+            # Single-arm planning has no moving-agent tail to validate. Static
+            # and self-collision remain covered by isvalid_function.
             self.dynamic_col_checker_to_end = lambda *args, **kwargs: False
         elif self.distance_metric_state_size == 2:
             self.dynamic_col_checker_to_end = check_dynamic_collisions_to_end
@@ -174,14 +180,23 @@ class RRT:
             )
         return np.asarray(state[:self.distance_metric_state_size], dtype=np.float64)
 
+    def parking_blocked(self, state, arrival_time):
+        """Return whether remaining at ``state`` would hit a future obstacle."""
+        return self.dynamic_col_checker_to_end(
+            state,
+            self.agent.radius,
+            self.dynamic_agent_obstacles,
+            self.dynamic_agent_clearance,
+            arrival_time,
+            self.minimum_time_step,
+        )
+
     def get_random_time(self):
         max_steps = max(
             1, int(np.floor(self.max_sample_T / self.minimum_time_step + 1e-12))
         )
         steps = int(self.rng.integers(1, max_steps + 1))
-        return round(
-            steps * self.minimum_time_step, self.roundoff_digits
-        )
+        return round(steps * self.minimum_time_step, self.roundoff_digits)
 
     def get_fixed_time(self):
         return self.max_sample_T
@@ -196,7 +211,10 @@ class RRT:
         return len(self.tree.nodes)
     
     def get_tree_structure(self):
-        return (self.tree, self._node_matrix)
+        # Keep the solution goal with the tree snapshot. Tree reuse needs the
+        # goal belonging to this exact snapshot to recover the solution branch;
+        # the most recently inserted tree node is not necessarily that goal.
+        return (self.tree, self._node_matrix, self.goal_node_id)
 
     def reset_tree(self, some_existing_tree=None):
         if some_existing_tree == None:
@@ -209,6 +227,11 @@ class RRT:
             self.last_added_node_id = -1
             self._node_matrix.count = 0
         else:
+            # KCBS uses this direct adoption only to continue an unfinished
+            # tree owned by the same infinite-cost CBS node. Constraint-based
+            # tree reuse rebuilds a separate graph and matrix before expansion,
+            # so completed tree snapshots shared by CBS siblings are not
+            # mutated through this path.
             self.tree = some_existing_tree[0]
             self._node_matrix = some_existing_tree[1]
             self.goal_node_id = None
@@ -228,16 +251,14 @@ class RRT:
         self.tree.add_node(new_node_id, value=new_node)
         self.last_added_node_id = new_node_id
 
-        # Store the agent's distance representation.  For the original planar
-        # agents this remains the leading x/y(/z) dimensions; articulated
-        # agents can provide a normalized full-state representation.
         self._node_matrix.append(self._distance_metric_state(state), new_node_id)
 
         return new_node_id
      
     def sample_random_point(self):
         r = self.rng.uniform(0, 1)
-        if r < self.goal_sampling_probability:
+        self._last_sample_was_goal = bool(r < self.goal_sampling_probability)
+        if self._last_sample_was_goal:
             random_point = self.goal
         else:
             # random_point = self.get_random_point(self.env, self.agent, self.rng)
@@ -254,7 +275,21 @@ class RRT:
         #Each entry in states is of size self.distance_metric_state_size
         #which by construction should be the same as the size of random_point
         metric_point = self._distance_metric_state(random_point)
-        nearest_index = get_nearest_index(states, num_entries, metric_point)
+        metric_dims = self.distance_metric_state_size
+        if hasattr(self.agent, "get_parent_selection_metric_dims"):
+            metric_dims = int(
+                self.agent.get_parent_selection_metric_dims(
+                    self._last_sample_was_goal
+                )
+            )
+            if not 0 < metric_dims <= self.distance_metric_state_size:
+                raise ValueError(
+                    "Agent parent-selection metric dimension is outside the "
+                    "planner state metric"
+                )
+        nearest_index = get_nearest_index(
+            states[:, :metric_dims], num_entries, metric_point[:metric_dims]
+        )
         # nearest_index = get_active_nearest_index(states, active, num_entries, random_point)
         nearest_node_id = self._node_matrix.ids[nearest_index]
         nearest_node = self.tree.nodes[nearest_node_id]['value']
@@ -352,9 +387,7 @@ class RRT:
         None
             If all trials are invalid.
         (new_state, path_to_new_state, random_action, random_time)
-            Best valid candidate according to a simple score. If a valid
-            candidate reaches the goal at an intermediate waypoint, the
-            returned path and duration end exactly at the first such waypoint.
+            Best valid candidate according to a simple score.
         """
 
         best_candidate = None
@@ -406,7 +439,7 @@ class RRT:
                 self.env.boundary_buffer,
                 parent_node.time_elapsed,
                 candidate_time,
-                step_time,
+                step_time
             )
 
             if not accept_new_node:
@@ -428,7 +461,11 @@ class RRT:
                 )
 
             # Score: distance to the sampled point (classic RRT heuristic)
-            if hasattr(self.agent, "get_distance"):
+            if hasattr(self.agent, "get_extension_score"):
+                score = self.agent.get_extension_score(
+                    new_state, random_point, self._last_sample_was_goal
+                )
+            elif hasattr(self.agent, "get_distance"):
                 score = self.agent.get_distance(new_state, random_point)
             else:
                 score = euclidean_distance_numba_with_l(
@@ -441,7 +478,7 @@ class RRT:
                     new_state,
                     candidate_path,
                     random_action,
-                    candidate_time,
+                    candidate_time
                 )
 
         return best_candidate
@@ -466,20 +503,23 @@ class RRT:
         else:
             new_state, path_to_new_state, random_action, random_time = best_candidate
 
-            reached_goal_flag, _ = self.reached_goal(
-                new_state, self.goal, self.goal_radius, self.agent
-            )
+            reached_goal_flag, goal_distance = self.reached_goal(new_state, self.goal,
+                                                            self.goal_radius, self.agent)
             if reached_goal_flag:
                 total_elapsed_time = parent_node.time_elapsed + random_time
-                if self.dynamic_col_checker_to_end(new_state, self.agent.radius,
-                                                self.dynamic_agent_obstacles,
-                                                self.dynamic_agent_clearance,
-                                                total_elapsed_time,
-                                                self.minimum_time_step):
+                if self.parking_blocked(new_state, total_elapsed_time):
                     if self.debug_flag:
-                        print("Goal state cannot be parked safely yet. Adding it as a transit node.")
+                        if self.use_goal_parking_fix:
+                            print("Goal state cannot remain safely at the goal yet. Adding it as a transit node.")
+                        else:
+                            print("Goal state cannot remain safely at the goal. Discarding the extension.")
+                    if not self.use_goal_parking_fix:
+                        # With the fix disabled, preserve the earlier behavior:
+                        # discard an endpoint that fails the existing future
+                        # dynamic-obstacle check.
+                        return
                 else:
-                    edge_cost = self.cost(self.env, self.agent, parent_node.state, random_action, 
+                    edge_cost = self.cost(self.env, self.agent, parent_node.state, random_action,
                                 random_time, path_to_new_state)
                     total_cost = parent_node.cost_so_far + edge_cost
 
@@ -493,19 +533,44 @@ class RRT:
                     self.path_time = total_elapsed_time
                     return
 
-            # Either the edge did not reach the goal, or a dynamic obstacle
-            # prevented the reached state from being accepted as a terminal
-            # state. In both cases it remains a valid transit node.
-            edge_cost = self.cost(
-                self.env, self.agent, parent_node.state, random_action,
-                random_time, path_to_new_state,
-            )
+            if not reached_goal_flag and goal_distance < self.threshold:
+                total_elapsed_time = parent_node.time_elapsed
+                for (index, intermediate_state) in enumerate(path_to_new_state):
+                    total_elapsed_time += self.minimum_time_step
+                    goal_flag, d = self.reached_goal(intermediate_state, self.goal,
+                                                     self.goal_radius, self.agent)
+                    if goal_flag:
+                        if self.parking_blocked(intermediate_state, total_elapsed_time):
+                            if self.debug_flag:
+                                print("Intermediate goal state will collide with high-priority agent. Trying again!")
+                            continue
+
+                        modified_edge_time = total_elapsed_time - parent_node.time_elapsed
+                        new_path_to_new_state = path_to_new_state[:index+1]
+                        edge_cost = self.cost(self.env, self.agent, parent_node.state, random_action,
+                                            modified_edge_time, new_path_to_new_state)
+                        total_cost = parent_node.cost_so_far + edge_cost
+                        new_node_id = self.add_rrt_node(intermediate_state, parent_node_id, random_action,
+                                                        modified_edge_time, new_path_to_new_state,
+                                                        total_elapsed_time, total_cost)
+                        self.path_found = True
+                        if self.debug_flag:
+                            print("Goal Reached! Path found for ",self.agent.id)
+                        self.goal_node_id = new_node_id
+                        self.path_cost = total_cost
+                        self.path_time = total_elapsed_time
+                        return
+
+            # A valid state that reaches the goal but cannot remain there is
+            # retained as a transit node so later expansions can leave, wait,
+            # and return after the blocking window.
+            edge_cost = self.cost(self.env, self.agent, parent_node.state, random_action,
+                                    random_time, path_to_new_state)
             total_elapsed_time = parent_node.time_elapsed + random_time
             total_cost = parent_node.cost_so_far + edge_cost
-            new_node_id = self.add_rrt_node(
-                new_state, parent_node_id, random_action, random_time,
-                path_to_new_state, total_elapsed_time, total_cost,
-            )
+
+            new_node_id = self.add_rrt_node(new_state, parent_node_id, random_action, random_time,
+                                            path_to_new_state, total_elapsed_time, total_cost)
             if self.debug_flag:
                 print("New Node Added to the RRT Tree: ", new_node_id)
             return
@@ -662,7 +727,7 @@ class RRT:
         start_reached, _ = self.reached_goal(
             self.start, self.goal, self.goal_radius, self.agent
         )
-        if start_reached:
+        if start_reached and not self.parking_blocked(self.start, 0.0):
             self.path_found = True
             self.goal_node_id = root_id
             self.path_time = 0.0
@@ -672,6 +737,8 @@ class RRT:
         start_time = time.time()
         
         while not self.path_found and curr_num_steps<=self.max_iter:
+            if time.time() - start_time >= self.planning_time:
+                break
             if self.debug_flag:
                 print("*************************************")
                 print("Iteration: ", curr_num_steps)
@@ -718,6 +785,8 @@ class RRT:
         start_time = time.time()
 
         while curr_num_steps<=self.max_iter:
+            if time.time() - start_time >= self.planning_time:
+                break
             if self.debug_flag:
                 print("*************************************")
                 print("Iteration: ", curr_num_steps)

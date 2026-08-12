@@ -125,7 +125,7 @@ class TestPipelineDbcbsFile(TestPipeline):
         obs = self.envs[self.env_counter][TestPipelineDbcbsFile.OBS_KEY]
          
 
-        filedir = "test_results/dbcbs_test_results/singlefile/" + self.envfile.split('.')[0]
+        filedir = "paper_results/dbcbs_test_results/singlefile/" + self.envfile.split('.')[0]
         agent_objs = []
         for agent in agents:
             agent_objs.append(agent.get_agent())
@@ -223,7 +223,7 @@ for filename in filenames:
     # collect test classes
     max_time = 300.
 
-    savepath = "test_results/dbcbs_test_results/singlefile/" + filename.split('.')[0]
+    savepath = "paper_results/dbcbs_test_results/singlefile/" + filename.split('.')[0]
     os.makedirs(savepath, exist_ok=True) 
 
     print("Using filename: " + filename)

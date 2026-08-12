@@ -1,0 +1,163 @@
+"""
+Single-agent iDb-RRT / KCBS-low-level optimizer probe for Unicycle agent 1 in
+Large Cluttered.
+
+This mirrors the Large Cluttered constants from pipeline_code/test_pipeline_large_cluttered.py,
+but runs only agent index 1 so we can debug the static optimizer repair without KCBS
+high-level conflicts.
+
+Run from the repo root:
+    python3 Tests/test_idb_rrt_unicycle_large_cluttered_agent1.py
+"""
+
+import os
+import sys
+import time
+
+import numpy as np
+
+REPO_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+SRC_DIR = os.path.join(REPO_ROOT, "src")
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
+
+from Environments import RectangleObstacle2D, SquareEnvironment
+from mapf_env_square_agent_unicycle import (
+    get_constrained_db_rrt_planner_unicycle,
+    get_unicycle_agent,
+)
+
+
+STARTS = [
+    (8.475727025696276, 36.399396853155096, 2.351704883710214),
+    (11.586823146518856, 36.0126973803567, 5.186804678458259),
+    (21.60583263510259, 16.476363676107802, 0.38223657632653696),
+    (21.38462394891068, 35.9108526038565, 5.585473581275507),
+    (11.526827287177163, 28.961425844173046, 4.923798055189963),
+    (17.154555241298887, 27.572396342307854, 4.059382377997044),
+    (9.194008174486147, 32.51411098476325, 4.262651508019563),
+    (3.0553400627138885, 10.412419495743238, 3.308785409838181),
+    (8.419711803902793, 23.011167560297043, 1.8299192267904372),
+    (35.61389396530191, 29.538268355135777, 0.46715533976667406),
+    (27.97018128591573, 14.805134880139946, 2.5104753053093702),
+    (34.228314106918226, 19.930206902949912, 1.8102825429964815),
+    (13.936969738487413, 8.537920154746892, 6.229323587358334),
+    (14.584178733413498, 19.492459300217995, 3.1329031605389273),
+    (20.350369103540398, 13.060259182455626, 5.060143540072023),
+    (5.350369103540398, 1.560259182455626, 5.060143540072023),
+    (28.0553400627138885, 37.412419495743238, 3.308785409838181),
+    (2.586823146518856, 26.0126973803567, 5.186804678458259),
+    (27.154555241298887, 31.572396342307854, 4.059382377997044),
+    (2.97018128591573, 14.805134880139946, 2.5104753053093702),
+    (33.194008174486147, 6.51411098476325, 4.262651508019563),
+    (24.0553400627138885, 30.412419495743238, 3.308785409838181),
+    (16.61389396530191, 24.538268355135777, 0.46715533976667406),
+    (10.226827287177163, 8.961425844173046, 4.923798055189963),
+    (20.38462394891068, 19.9108526038565, 5.585473581275507),
+    (26.936969738487413, 28.537920154746892, 6.229323587358334),
+    (9.984178733413498, 16.892459300217995, 3.1329031605389273),
+    (5.228314106918226, 22.930206902949912, 1.8102825429964815),
+    (14.60583263510259, 14.476363676107802, 0.38223657632653696),
+    (13.475727025696276, 32.399396853155096, 2.351704883710214),
+]
+
+GOALS = [
+    (34.864329915511654, 9.003899733940381),
+    (27.300942040287637, 20.57283260237884),
+    (21.415433893642362, 32.11505993112027),
+    (18.965682757246398, 22.875128976549142),
+    (15.782169681359699, 10.592860806584735),
+    (23.895727973205105, 35.318459073195),
+    (29.95421575545637, 31.261370762087413),
+    (21.695409776980473, 21.46828957867312),
+    (20.28401116779998, 34.36720330871995),
+    (10.471055047841116, 33.422171568528704),
+    (10.870944796891283, 12.280159780084496),
+    (21.80886420867282, 28.720035908547196),
+    (23.43037289856673, 26.50671273395829),
+    (20.52385248009077, 4.957724964768499),
+    (32.23290105920922, 9.441693400859048),
+    (3.28401116779998, 18.36720330871995),
+    (30.43037289856673, 24.50671273395829),
+    (15.870944796891283, 16.480159780084496),
+    (7.782169681359699, 25.592860806584735),
+    (24.870944796891283, 14.280159780084496),
+    (6.295409776980473, 9.46828957867312),
+    (3.095727973205105, 37.318459073195),
+    (37.80886420867282, 23.720035908547196),
+    (36.300942040287637, 2.97283260237884),
+    (31.471055047841116, 29.422171568528704),
+    (9.965682757246398, 20.875128976549142),
+    (27.415433893642362, 8.11505993112027),
+    (14.55421575545637, 5.261370762087413),
+    (4.52385248009077, 27.957724964768499),
+    (4.864329915511654, 5.003899733940381),
+]
+
+OBSTACLES = [
+    RectangleObstacle2D(7.2318180528742, 19.11557739153202, 3.6001340616706443, 1.2342962240137418),
+    RectangleObstacle2D(24.640769120616746, 11.249958595699702, 1.8879733859231442, 2.7977578114173465),
+    RectangleObstacle2D(33.52165105929789, 14.712475719357597, 4.987964054602642, 4.762326271741823),
+    RectangleObstacle2D(25.087543392907982, 4.588990511682701, 4.740777979767133, 2.78139498421943),
+    RectangleObstacle2D(33.89683742111731, 25.475322697342563, 1.933936687930509, 2.2835108061898968),
+    RectangleObstacle2D(34.37105405176375, 35.2127489370062, 4.163599185649419, 2.673047891734387),
+    RectangleObstacle2D(16.765313221135678, 33.66062958329129, 2.9450461561358456, 6.237881829980317),
+    RectangleObstacle2D(4.578790030760515, 32.45567757895103, 2.1340532155846708, 2.612702802456554),
+    RectangleObstacle2D(25.12892430122978, 22.266743199270557, 1.4311726211916573, 7.232857246763847),
+    RectangleObstacle2D(13.385729240385057, 24.03349439022954, 1.3892207989803393, 3.6348281532725073),
+    RectangleObstacle2D(6.971415847887632, 14.013040661417069, 3.8846399568092878, 2.352161305699923),
+    RectangleObstacle2D(17.938939841099074, 6.780920639306122, 1.4716421879683201, 3.6851890360628623),
+    RectangleObstacle2D(10.257196133603149, 5.4469093419979275, 4.115726446827529, 1.8541809184556888),
+    RectangleObstacle2D(31.15259510533822, 4.60663958022095, 1.0702469277264908, 1.6214788027072329),
+]
+
+
+def main():
+    agent_id = 1
+    goal_radius = 0.5
+    env = SquareEnvironment(40.0, 40.0, OBSTACLES, obs_buffers=False)
+    agent = get_unicycle_agent(agent_id)
+    planner = get_constrained_db_rrt_planner_unicycle(
+        STARTS[agent_id],
+        GOALS[agent_id],
+        goal_radius,
+        agent,
+        env,
+        use_optimizer=True,
+    )
+    planner.print_logs = True
+    planner.debug_flag = False
+
+    print("===== Large Cluttered Unicycle Agent 1 iDb-RRT Optimizer Probe =====")
+    print("start:", STARTS[agent_id])
+    print("goal:", GOALS[agent_id])
+    print("agent radius:", agent.radius)
+    print("goal radius:", goal_radius)
+
+    t0 = time.time()
+    planner.plan_path()
+    elapsed = time.time() - t0
+
+    print("\n===== Result =====")
+    print("path_found_final:", planner.path_found)
+    print("optimization_attempted:", getattr(planner, "optimization_attempted", None))
+    print("optimization_succeeded:", getattr(planner, "optimization_succeeded", None))
+    print("optimization_failed:", getattr(planner, "optimization_failed", None))
+    print("trajectory_source:", getattr(planner, "trajectory_source", None))
+    print("raw_path_found:", getattr(planner, "raw_path_found", None))
+    print("raw_path_cost:", getattr(planner, "raw_path_cost", None))
+    print("raw_path_time:", getattr(planner, "raw_path_time", None))
+    print("path_cost_final:", getattr(planner, "path_cost", None))
+    print("path_time_final:", getattr(planner, "path_time", None))
+    print("wall_time:", elapsed)
+
+    if planner.path_found:
+        states = planner.get_high_resolution_path_numpy_array()
+        final_dist = np.linalg.norm(states[-1, :2] - np.asarray(GOALS[agent_id], dtype=np.float64))
+        print("states:", states.shape[0])
+        print("final_state:", states[-1])
+        print("final_goal_distance:", final_dist)
+
+
+if __name__ == "__main__":
+    main()

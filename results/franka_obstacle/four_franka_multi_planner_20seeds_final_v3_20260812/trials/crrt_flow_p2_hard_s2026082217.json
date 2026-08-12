@@ -1,0 +1,39 @@
+{
+  "coordination": "crrt",
+  "base_planner": "flow",
+  "problem_id": 2,
+  "difficulty": "hard",
+  "trial_seed": 2026082217,
+  "success": false,
+  "planner_solved": false,
+  "audit_passed": false,
+  "planning_time_seconds": 30.11406580000039,
+  "path_makespan_seconds": null,
+  "path_mean_agent_time_seconds": null,
+  "path_cost": null,
+  "tree_nodes": 531,
+  "high_level_nodes": 531,
+  "iterations": 573,
+  "checked_waypoints": 54786,
+  "per_agent_path_times_seconds": [],
+  "audit": {
+    "reason": "planner_failed"
+  },
+  "generations": [],
+  "planner_profile": {
+    "flow_generation_calls": 280,
+    "flow_generated_bundles": 976,
+    "joint_flow_trials": 1125,
+    "joint_flow_valid": 506,
+    "joint_flow_static_rejections": 597,
+    "joint_flow_interarm_rejections": 22,
+    "random_fallbacks": 67
+  },
+  "flow_generator_profile": {
+    "samples": 976,
+    "sample_total_s": 14.864288999975543,
+    "model_s": 14.644691699992109,
+    "postprocess_s": 0.15105529994616518
+  },
+  "completed_utc": "2026-08-12T16:30:50.865456+00:00"
+}

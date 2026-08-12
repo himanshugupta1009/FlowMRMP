@@ -53,8 +53,18 @@ def constraint_satisfaction_numba(constraints, start_index, end_index,
             # There is no conflict.
             continue
 
-        # There is a conflict.
-        for state_idx in range(path_length):
+        # States occur at path_start_time + (state_idx + 1) * delta_t.
+        # Limit the scan to indices that can overlap the conflict window,
+        # padded on both sides so correctness does not depend on float
+        # rounding; the exact per-state time check below remains authoritative.
+        state_idx_lo = int((start_conflict_time - path_start_time) / delta_t) - 2
+        state_idx_hi = int((end_conflict_time - path_start_time) / delta_t) + 1
+        if state_idx_lo < 0:
+            state_idx_lo = 0
+        if state_idx_hi > path_length - 1:
+            state_idx_hi = path_length - 1
+
+        for state_idx in range(state_idx_lo, state_idx_hi + 1):
             agent_state = path_to_new_state[state_idx]
             curr_t = round(path_start_time + (state_idx+1)*delta_t, roundoff_digits)
             # if constraint_debugging:
@@ -88,6 +98,35 @@ def constraint_satisfaction_numba(constraints, start_index, end_index,
     return True
 
 
+@njit
+def constraint_satisfaction_parked_numba(
+        constraints, parked_state, parked_start_time, curr_agent_radius,
+        delta_t, distance_metric_state_size, dynamic_agent_clearance=0.1,
+        roundoff_digits=1):
+    """Check the stationary path tail assumed after goal arrival by KCBS."""
+    if len(constraints) == 0:
+        return True
+
+    for i in range(len(constraints)):
+        collision_keys, collision_agent_positions, collision_agent_radius = constraints[i]
+        if collision_keys[-1] < parked_start_time:
+            continue
+
+        threshold = collision_agent_radius + curr_agent_radius + dynamic_agent_clearance
+        for key_index in range(len(collision_keys)):
+            if collision_keys[key_index] < parked_start_time:
+                continue
+            distance = euclidean_distance_numba_with_l(
+                parked_state,
+                collision_agent_positions[key_index],
+                distance_metric_state_size,
+            )
+            if distance <= threshold:
+                return False
+
+    return True
+
+
 class ConstrainedRRT(RRT):
     def __init__(self, * , start, goal, goal_radius, env, agent,
                     use_fixed_sampling_time=True, 
@@ -102,10 +141,11 @@ class ConstrainedRRT(RRT):
                     random_point_function, 
                     udf_seed = 77,
                     goal_sampling_probability=0.1,
+                    use_goal_parking_fix=True,
                     dynamic_agent_clearance=0.0,
                     debug_flag=False,
                     print_logs=False,
-                    prune_tree=False,
+                    reuse_tree=False,
                     is_collision_func=is_collision_math
                     ):
 
@@ -123,6 +163,7 @@ class ConstrainedRRT(RRT):
                          random_point_function=random_point_function, 
                          udf_seed=udf_seed,
                          goal_sampling_probability=goal_sampling_probability,
+                         use_goal_parking_fix=use_goal_parking_fix,
                          dynamic_agent_clearance=dynamic_agent_clearance,
                          debug_flag=debug_flag,
                          print_logs=print_logs)
@@ -134,11 +175,22 @@ class ConstrainedRRT(RRT):
 
         self.is_collision_func = is_collision_func
         self.dynamic_agent_clearance = dynamic_agent_clearance
-        self.prune_tree = prune_tree
+        self.reuse_tree = bool(reuse_tree)
 
 
     def set_constraints(self, cons):
         self.constraints = cons
+
+
+    def copy_retained_node_bookkeeping(self, old_node, new_node):
+        """Copy planner-specific search state when retaining a tree node."""
+        # Design note: node reconstruction and this hook could be combined
+        # into a polymorphic add_retained_rrt_node(old_node, new_parent_id)
+        # method, with KiTE overriding it to copy candidate bookkeeping. That
+        # would encapsulate the two operations but would not reduce Python
+        # calls unless add_rrt_node() were duplicated/inlined, so the simpler
+        # separated design is retained for now.
+        return
 
 
     def constraint_satisfaction(self,path_to_new_state,path_start_time):
@@ -147,6 +199,22 @@ class ConstrainedRRT(RRT):
                             path_to_new_state,path_start_time, self.agent.radius, 
                             self.minimum_time_step,self.distance_metric_state_size,
                             self.dynamic_agent_clearance, self.roundoff_digits)
+
+    def parking_blocked(self, state, arrival_time):
+        if RRT.parking_blocked(self, state, arrival_time):
+            return True
+        if not self.use_goal_parking_fix:
+            return False
+        return not constraint_satisfaction_parked_numba(
+            self.constraints,
+            state,
+            arrival_time,
+            self.agent.radius,
+            self.minimum_time_step,
+            self.distance_metric_state_size,
+            self.dynamic_agent_clearance,
+            self.roundoff_digits,
+        )
 
 
     def _select_best_extension_candidate(self, parent_node, random_point):
@@ -223,9 +291,24 @@ class ConstrainedRRT(RRT):
         # The edge is a tuple (x,y) where x is the start node and y is the end node.
         # The edge is returned as a tuple (x,y)
 
+        if goal_node_id is None:
+            print("[ERROR get_conflict_edge] The retained RRT tree snapshot "
+                  "has no solution goal node id. KCBS tree bookkeeping needs "
+                  "to be checked.")
+            return (-100, -100)
+
+        if goal_node_id not in tree:
+            print("[ERROR get_conflict_edge] Solution goal node",
+                  goal_node_id, "is missing from its retained RRT tree "
+                  "snapshot. KCBS tree bookkeeping needs to be checked.")
+            return (-100, -100)
+
         # Edge is parent_id -> child_id
         child_id = goal_node_id
         parent_id = tree.nodes[child_id]['value'].parent_id
+        if parent_id == -1 or parent_id not in tree:
+            return (-100, -100)
+
         rrt_parent_node = tree.nodes[parent_id]['value']
         if rrt_parent_node.time_elapsed < time_value:
             #It means the conflict happens from the goal node's parent to the goal node.
@@ -252,9 +335,17 @@ class ConstrainedRRT(RRT):
         Note: New set of constraints = Old set of constraints U {New conflict}.
         New Conflict = (collision_keys, collision_agent_position_array, collision_agent_radius)
         New Conflict is appended to the end of the constraints list.
+
+        This method validates retained edges using self.constraints. KCBS must
+        therefore call set_constraints(constraints) immediately before calling
+        this method. The constraints argument identifies the newly appended
+        conflict, while self.constraints is the active set used by
+        constraint_satisfaction_numba(). Calling this method directly without
+        first installing the same constraint list can validate against stale
+        constraints.
         """
 
-        if self.prune_tree == False:
+        if not self.reuse_tree:
             self.reset_tree()
             return self.plan_path()
         else:
@@ -278,20 +369,23 @@ class ConstrainedRRT(RRT):
             new_conflict = constraints[-1]
             conflict_start_time = new_conflict[0][0]
             num_constraints = len(constraints)
-            curr_tree, curr_matrix = curr_tree_structure
+            curr_tree = curr_tree_structure[0]
 
-            #Find the edge in the tree that has the conflict/constraint. Edge->(x,y)
-            #TO-DO - this is wrong at the moment because the tree in the planner is some
-            #random tree and so are the goal_id, path_found etc. Need to fix it.
-            goal_node_id = next(reversed(curr_tree._node))
+            # Find the edge on the solution path that overlaps the conflict.
+            # The goal id travels with its snapshot because the last inserted
+            # tree node is not necessarily the goal for that solution.
+            goal_node_id = curr_tree_structure[2]
+
             edge_start_node_id, edge_end_node_id = self.get_conflict_edge(curr_tree, goal_node_id, conflict_start_time)
             
             if edge_start_node_id == -100 and edge_end_node_id == -100:
-                print("Conflict start time: ", conflict_start_time)
-                # breakpoint()
-                raise ValueError("[ERROR F:plan_path_with_constraints] Collision exists, but " \
-                        "collision edge not found in the tree.")
-                return None
+                print("[ERROR plan_path_with_constraints] Could not locate "
+                      "the new conflict on the retained solution path "
+                      "(conflict start time:", conflict_start_time, "). "
+                      "KCBS tree bookkeeping and conflict timing need to be "
+                      "checked. Falling back to a scratch replan.")
+                self.reset_tree()
+                return self.plan_path()
             else:
                 # descendants = self.find_descendants(edge_end_node_id)
                 self.tree = nx.DiGraph()
@@ -303,13 +397,23 @@ class ConstrainedRRT(RRT):
                 self._node_matrix.count = 0
                 
                 new_id_dict = {} #Old node id -> New node id
+                # get_conflict_edge() returns x -> y, where the new
+                # constraint first affects the stored solution path. The old
+                # subtree below y cannot be reused. However, x -> y itself
+                # still needs validation: when the collision occurs after
+                # arrival while the agent is implicitly parked at y, the
+                # incoming edge can remain valid and y can be retained as an
+                # ordinary transit node.
                 descendants = {edge_end_node_id}
+                copy_retained_bookkeeping = self.copy_retained_node_bookkeeping
 
                 #Add the root node to the new tree.
                 root_node = curr_tree.nodes[0]['value']
                 new_root_id = self.add_rrt_node(root_node.state, -1, root_node.parent_action,
                                 root_node.parent_action_duration, root_node.path_from_parent,
                                 root_node.time_elapsed, root_node.cost_so_far)
+                new_root_node = self.tree.nodes[new_root_id]['value']
+                copy_retained_bookkeeping(root_node, new_root_node)
                 new_id_dict[0] = new_root_id
 
                 # for node_id in range(1, num_curr_tree_nodes): #Start from 1 to avoid the root node.
@@ -318,10 +422,17 @@ class ConstrainedRRT(RRT):
                         continue
                     curr_node = curr_tree.nodes[node_id]['value']
                     parent_id = curr_node.parent_id
+                    # A node whose parent is in the discarded subtree cannot
+                    # be retained. Do not also skip node_id merely because it
+                    # is y: the constraint check below distinguishes a
+                    # collision on x -> y from one on y's parked tail.
                     if parent_id in descendants:
                         descendants.add(node_id)
                     else:
-                        #Check if this node can be added to the new tree.                    
+                        # NetworkX preserves node insertion order, and RRT
+                        # children are always inserted after their parents.
+                        # Therefore every retained parent has already been
+                        # remapped before its children are processed.
                         new_parent_id = new_id_dict[parent_id]
                         path_start_time = curr_tree.nodes[parent_id]['value'].time_elapsed
                         satisfy_new_constraint = constraint_satisfaction_numba(self.constraints, 
@@ -335,6 +446,8 @@ class ConstrainedRRT(RRT):
                             new_node_id = self.add_rrt_node(curr_node.state, new_parent_id, curr_node.parent_action,
                                             curr_node.parent_action_duration, curr_node.path_from_parent,
                                             curr_node.time_elapsed, curr_node.cost_so_far)
+                            new_node = self.tree.nodes[new_node_id]['value']
+                            copy_retained_bookkeeping(curr_node, new_node)
                             new_id_dict[node_id] = new_node_id
                         else:
                             #Do not add this node or any of its descendants to the new tree.
@@ -346,13 +459,15 @@ class ConstrainedRRT(RRT):
                     print("Number of nodes in the old tree: ", len(curr_tree.nodes))
                     print("Number of descendants removed: ", len(descendants))
 
-            #Start rewiring and growing the new tree from x.
-            rewiring_node_id = new_id_dict[edge_start_node_id]
-            rewiring_node = self.tree.nodes[rewiring_node_id]['value']
-            self.extend_tree(rewiring_node_id, rewiring_node, self.goal)
+            # Start growing toward the goal from immediately before the
+            # conflict when that parent survived full-tree revalidation.
+            if edge_start_node_id in new_id_dict:
+                rewiring_node_id = new_id_dict[edge_start_node_id]
+                rewiring_node = self.tree.nodes[rewiring_node_id]['value']
+                self.extend_tree(rewiring_node_id, rewiring_node, self.goal)
             
             #Plan for a new path with this modified tree.
-            self.replan_path()
+            return self.replan_path()
 
 
 class ConstrainedRRTPB(ConstrainedRRT):        
@@ -383,6 +498,8 @@ class ConstrainedEdgeBundleType2RRT(ConstrainedRRT,EdgeBundleType2RRT):
                     random_point_function,
                     udf_seed = 77,
                     goal_sampling_probability=0.1,
+                    use_goal_parking_fix=True,
+                    reuse_tree=False,
                     dynamic_agent_clearance=0.0,
                     num_random_edges=10, 
                     num_skip_edges=10, 
@@ -416,6 +533,11 @@ class ConstrainedEdgeBundleType2RRT(ConstrainedRRT,EdgeBundleType2RRT):
                                     print_logs=print_logs,
                                     )
 
+        # True checks whether a goal arrival can remain there safely and keeps
+        # an unsafe arrival as a transit node. False accepts a valid goal
+        # arrival without checking its stationary tail.
+        self.use_goal_parking_fix = bool(use_goal_parking_fix)
+        self.reuse_tree = bool(reuse_tree)
         self.constraints = List()
         dummy_constraint = (np.empty(0), np.empty((0,0)), 0.0)  # Placeholder for constraints
         self.constraints.append(dummy_constraint)
@@ -462,32 +584,42 @@ class ConstrainedEdgeBundleType2RRT(ConstrainedRRT,EdgeBundleType2RRT):
                         self.goal, self.goal_radius, self.agent)
 
         if reached_goal_flag:
-            edge_cost = self.cost(self.env, self.agent, parent_node.state, 
-                            action, timestep, path_to_new_state)
-            total_cost = parent_node.cost_so_far + edge_cost
             total_elapsed_time = parent_node.time_elapsed + timestep
+            if (self.use_goal_parking_fix
+                    and self.parking_blocked(new_state, total_elapsed_time)):
+                if self.debug_flag:
+                    print(f"{debug_prefix}Goal state cannot be parked safely yet. Adding it as a transit node.")
+            else:
+                edge_cost = self.cost(self.env, self.agent, parent_node.state,
+                                action, timestep, path_to_new_state)
+                total_cost = parent_node.cost_so_far + edge_cost
 
-            new_node_id = self.add_rrt_node(new_state,parent_node_id,action,
-                    timestep,path_to_new_state,total_elapsed_time,total_cost)
+                new_node_id = self.add_rrt_node(new_state,parent_node_id,action,
+                        timestep,path_to_new_state,total_elapsed_time,total_cost)
 
-            self.path_found = True
-            self.goal_node_id = new_node_id
-            self.path_time = total_elapsed_time
-            self.path_cost = total_cost
+                self.path_found = True
+                self.goal_node_id = new_node_id
+                self.path_time = total_elapsed_time
+                self.path_cost = total_cost
 
-            if self.debug_flag:
-                print(f"{debug_prefix}Goal Reached! Path found for ", self.agent.id)
+                if self.debug_flag:
+                    print(f"{debug_prefix}Goal Reached! Path found for ", self.agent.id)
 
-            return True
+                return True
 
         # Check if goal is hit along the path to new_state
-        if goal_distance < self.threshold:
+        if not reached_goal_flag and goal_distance < self.threshold:
             total_elapsed_time = parent_node.time_elapsed
             for index, intermediate_state in enumerate(path_to_new_state):
                 total_elapsed_time += self.minimum_time_step
                 goal_flag, _ = self.reached_goal(intermediate_state, self.goal,
                                     self.goal_radius, self.agent)
                 if goal_flag:
+                    if (self.use_goal_parking_fix
+                            and self.parking_blocked(intermediate_state, total_elapsed_time)):
+                        if self.debug_flag:
+                            print(f"{debug_prefix}Intermediate goal state violates a later constraint window. Trying again!")
+                        continue
                     modified_edge_time = total_elapsed_time - parent_node.time_elapsed
                     new_path_to_new_state = path_to_new_state[:index + 1]
 
@@ -527,69 +659,6 @@ class ConstrainedEdgeBundleType2RRT(ConstrainedRRT,EdgeBundleType2RRT):
     def extend_tree(self, *args, **kwargs):
         return EdgeBundleType2RRT.extend_tree(self, *args, **kwargs)
 
-    def plan_path_with_constraints(self, curr_tree_structure, constraints):
-
-        #For now. Need to modify this to have rewiring later.
-        self.reset_tree()
-        return self.plan_path()
-
-        """
-        1. Find the edge in the tree that has the conflict/constraint. Edge->(x,y)
-        2. Find all the nodes in the tree that are descendants of y.
-        3. Remove all the descendants of y from the tree.
-        4. Delete the edge (x,y) from the tree.
-        5. Start rewiring and growing the new tree from x.
-        6. If the new tree has a path to the goal, return the path.
-        """
-
-        if(self.path_found):
-            #This means a path was already found which avoids the old constraints.
-            """
-            1. Find the minimum time stamp from the new constraints.
-            2. Find the edge in the tree that has the conflict/constraint. Edge->(x,y)
-            3. Find and remove all the nodes in the tree that are descendants of y.
-            4. Delete the edge (x,y) from the tree.
-            """
-
-            #Find the minimum time stamp from the new constraints.
-            # min_time_stamp = float('inf')
-            # for constraint in newly_added_constraints:
-            #     min_time_stamp = min(min_time_stamp, constraint.start_time)
-            min_time_stamp = newly_added_constraints.start_time
-
-            #Find the edge in the tree that has the conflict/constraint. Edge->(x,y)
-            edge_start_node_id, edge_end_node_id = self.get_conflict_edge(min_time_stamp)
-            if edge_start_node_id == -100 and edge_end_node_id == -100:
-                print("Min time stamp: ", min_time_stamp)
-                # breakpoint()
-                # self.get_conflict_edge(min_time_stamp)
-                raise ValueError("[ERROR F:plan_path_with_constraints] Collision exists, but " \
-                      "collision edge not found in the tree.")
-                return None
-            else:
-                #Find and remove all the nodes in the tree that are descendants of y.
-                descendants = self.find_descendants(edge_end_node_id)
-                self.remove_descendants(descendants)
-                #Delete the edge (x,y) from the tree.
-                #No need to delete the edge from the tree in our code 
-                #since the tree has no edges in our implementation.
-        else:
-            #Path has not been found yet.
-            #The code shouldn't get here because the path should have been found 
-            #since the plan_path_with_constraints function is called only when
-            #there are collisions in the found path. 
-            raise ValueError("[ERROR F:plan_path_with_constraints] Path was not found earlier, " \
-                   "but constraints were added. This is not expected.")
-
-
-        #Start rewiring and growing the new tree from x.
-        rewiring_node = self.tree.nodes[edge_start_node_id]['value']
-        self.extend_tree(edge_start_node_id, rewiring_node, self.goal)
-
-        #Plan for a new path with this modified tree.
-        self.replan_path()
-
-
 class ConstrainedKinoTIEBRRT(ConstrainedRRT,KinoTIEBRRT):
     def __init__(self, * , start, goal, goal_radius, env, agent, 
                     edge_bundle,
@@ -607,12 +676,16 @@ class ConstrainedKinoTIEBRRT(ConstrainedRRT,KinoTIEBRRT):
                     is_collision_func = is_collision_math,
                     max_num_edges_per_node=1000,
                     num_skip_edges=50,
+                    rank_candidates=True,
+                    use_geometric_candidate_schedule=True,
                     num_random_edges=1,
                     epsilon_random=0.01,
                     eb_kd_tree,
                     get_eb_kd_tree_query,
                     kd_tree_delta_radius=0.5,
                     goal_sampling_probability=0.1,
+                    use_goal_parking_fix=True,
+                    reuse_tree=False,
                     dynamic_agent_clearance=0.0,
                     udf_seed,
                     debug_flag=False,
@@ -636,6 +709,9 @@ class ConstrainedKinoTIEBRRT(ConstrainedRRT,KinoTIEBRRT):
                     sort_edges_function=sort_edges_function,
                     max_num_edges_per_node=max_num_edges_per_node,
                     num_skip_edges=num_skip_edges,
+                    rank_candidates=rank_candidates,
+                    use_geometric_candidate_schedule=(
+                        use_geometric_candidate_schedule),
                     num_random_edges=num_random_edges,
                     epsilon_random=epsilon_random,
                     eb_kd_tree=eb_kd_tree,
@@ -648,6 +724,11 @@ class ConstrainedKinoTIEBRRT(ConstrainedRRT,KinoTIEBRRT):
                     print_logs=print_logs,
                     )
 
+        # True checks whether a goal arrival can remain there safely and keeps
+        # an unsafe arrival as a transit node. False accepts a valid goal
+        # arrival without checking its stationary tail.
+        self.use_goal_parking_fix = bool(use_goal_parking_fix)
+        self.reuse_tree = bool(reuse_tree)
         self.constraints = List()
         dummy_constraint = (np.empty(0), np.empty((0,0)), 0.0)  # Placeholder for constraints
         self.constraints.append(dummy_constraint)
@@ -655,6 +736,14 @@ class ConstrainedKinoTIEBRRT(ConstrainedRRT,KinoTIEBRRT):
 
         self.is_collision_func = is_collision_func
         self.dynamic_agent_clearance = dynamic_agent_clearance
+
+    def copy_retained_node_bookkeeping(self, old_node, new_node):
+        # Candidate ids are selected once for this state and are read-only, so
+        # retained CBS branches can share that array. The mask is updated in
+        # place as primitives are tried, so each branch needs its own copy.
+        new_node.edge_bundle_indices = old_node.edge_bundle_indices
+        if old_node.edge_bundle_mask is not None:
+            new_node.edge_bundle_mask = old_node.edge_bundle_mask.copy()
 
     def _try_edge_from_bundle(self,edge_bundle_index,parent_node,
                 parent_node_id,mask_index,curr_edge_mask,debug_prefix=""):
@@ -695,34 +784,44 @@ class ConstrainedKinoTIEBRRT(ConstrainedRRT,KinoTIEBRRT):
                             self.goal_radius, self.agent)
 
         if reached_goal_flag:
-            edge_cost = self.cost(self.env, self.agent, parent_node.state, 
-                            action, timestep, path_to_new_state)
-            total_cost = parent_node.cost_so_far + edge_cost
             total_elapsed_time = parent_node.time_elapsed + timestep
+            if (self.use_goal_parking_fix
+                    and self.parking_blocked(new_state, total_elapsed_time)):
+                if self.debug_flag:
+                    print(f"{debug_prefix}Goal state cannot be parked safely yet. Adding it as a transit node.")
+            else:
+                edge_cost = self.cost(self.env, self.agent, parent_node.state,
+                                action, timestep, path_to_new_state)
+                total_cost = parent_node.cost_so_far + edge_cost
 
-            new_node_id = self.add_rrt_node(new_state,parent_node_id,
-                        action,timestep,path_to_new_state,
-                        total_elapsed_time,total_cost)
+                new_node_id = self.add_rrt_node(new_state,parent_node_id,
+                            action,timestep,path_to_new_state,
+                            total_elapsed_time,total_cost)
 
-            self.path_found = True
-            self.goal_node_id = new_node_id
-            self.path_time = total_elapsed_time
-            self.path_cost = total_cost
-            curr_edge_mask[mask_index] = True
+                self.path_found = True
+                self.goal_node_id = new_node_id
+                self.path_time = total_elapsed_time
+                self.path_cost = total_cost
+                curr_edge_mask[mask_index] = True
 
-            if self.debug_flag:
-                print(f"{debug_prefix}Goal Reached! Path found for ", self.agent.id)
+                if self.debug_flag:
+                    print(f"{debug_prefix}Goal Reached! Path found for ", self.agent.id)
 
-            return True  # node added
+                return True  # node added
 
         # Check if we hit the goal along the path
-        if goal_distance < self.threshold:
+        if not reached_goal_flag and goal_distance < self.threshold:
             total_elapsed_time = parent_node.time_elapsed
             for index, intermediate_state in enumerate(path_to_new_state):
                 total_elapsed_time += self.minimum_time_step
                 goal_flag, d = self.reached_goal(intermediate_state, self.goal,
                             self.goal_radius, self.agent)
                 if goal_flag:
+                    if (self.use_goal_parking_fix
+                            and self.parking_blocked(intermediate_state, total_elapsed_time)):
+                        if self.debug_flag:
+                            print(f"{debug_prefix}Intermediate goal state violates a later constraint window. Trying again!")
+                        continue
                     modified_edge_time = total_elapsed_time - parent_node.time_elapsed
                     new_path_to_new_state = path_to_new_state[:index + 1]
 
@@ -798,33 +897,43 @@ class ConstrainedKinoTIEBRRT(ConstrainedRRT,KinoTIEBRRT):
                             self.goal_radius, self.agent)
 
         if reached_goal_flag:
-            edge_cost = self.cost(self.env, self.agent, parent_node.state,
-                            action, timestep, path_to_new_state)
-            total_cost = parent_node.cost_so_far + edge_cost
             total_elapsed_time = parent_node.time_elapsed + timestep
+            if (self.use_goal_parking_fix
+                    and self.parking_blocked(new_state, total_elapsed_time)):
+                if self.debug_flag:
+                    print(f"{debug_prefix}Goal state cannot be parked safely yet. Adding it as a transit node.")
+            else:
+                edge_cost = self.cost(self.env, self.agent, parent_node.state,
+                                action, timestep, path_to_new_state)
+                total_cost = parent_node.cost_so_far + edge_cost
 
-            new_node_id = self.add_rrt_node(new_state,parent_node_id,
-                        action,timestep,path_to_new_state,
-                        total_elapsed_time,total_cost)
+                new_node_id = self.add_rrt_node(new_state,parent_node_id,
+                            action,timestep,path_to_new_state,
+                            total_elapsed_time,total_cost)
 
-            self.path_found = True
-            self.goal_node_id = new_node_id
-            self.path_time = total_elapsed_time
-            self.path_cost = total_cost
+                self.path_found = True
+                self.goal_node_id = new_node_id
+                self.path_time = total_elapsed_time
+                self.path_cost = total_cost
 
-            if self.debug_flag:
-                print(f"{debug_prefix}Goal Reached! Path found for ", self.agent.id)
+                if self.debug_flag:
+                    print(f"{debug_prefix}Goal Reached! Path found for ", self.agent.id)
 
-            return True
+                return True
 
         # Check if we hit the goal along the path
-        if goal_distance < self.threshold:
+        if not reached_goal_flag and goal_distance < self.threshold:
             total_elapsed_time = parent_node.time_elapsed
             for index, intermediate_state in enumerate(path_to_new_state):
                 total_elapsed_time += self.minimum_time_step
                 goal_flag, d = self.reached_goal(intermediate_state, self.goal,
                             self.goal_radius, self.agent)
                 if goal_flag:
+                    if (self.use_goal_parking_fix
+                            and self.parking_blocked(intermediate_state, total_elapsed_time)):
+                        if self.debug_flag:
+                            print(f"{debug_prefix}Intermediate goal state violates a later constraint window. Trying again!")
+                        continue
                     modified_edge_time = total_elapsed_time - parent_node.time_elapsed
                     new_path_to_new_state = path_to_new_state[:index + 1]
 
@@ -865,22 +974,6 @@ class ConstrainedKinoTIEBRRT(ConstrainedRRT,KinoTIEBRRT):
     def extend_tree(self, *args, **kwargs):
         return KinoTIEBRRT.extend_tree(self, *args, **kwargs)
 
-    def plan_path_with_constraints(self, curr_tree_structure, constraints):
-
-        #For now. Need to modify this to have rewiring later.
-        self.reset_tree()
-        return self.plan_path()
-
-        """
-        1. Find the edge in the tree that has the conflict/constraint. Edge->(x,y)
-        2. Find all the nodes in the tree that are descendants of y.
-        3. Remove all the descendants of y from the tree.
-        4. Delete the edge (x,y) from the tree.
-        5. Start rewiring and growing the new tree from x.
-        6. If the new tree has a path to the goal, return the path.
-        """
-
-
 class ConstrainedDbRRTPlanner(DbRRTPlanner):
     """
     Constrained Db-RRT planner for KCBS / CBS-style low-level search.
@@ -890,8 +983,12 @@ class ConstrainedDbRRTPlanner(DbRRTPlanner):
     checks and the currently active time-indexed constraints.
     """
 
-    def __init__(self, *args, dynamic_agent_clearance: float = 0.0, **kwargs):
+    def __init__(self, *args, dynamic_agent_clearance: float = 0.0,
+                 use_goal_parking_fix=True, **kwargs):
         super().__init__(*args, **kwargs)
+        # True also requires the stationary goal tail to satisfy future
+        # constraints. False retains only the legacy superclass safety check.
+        self.use_goal_parking_fix = bool(use_goal_parking_fix)
         self.constraints = List()
         dummy_constraint = (np.empty(0), np.empty((0, 0)), 0.0)
         self.constraints.append(dummy_constraint)
@@ -906,7 +1003,13 @@ class ConstrainedDbRRTPlanner(DbRRTPlanner):
         self.raw_goal_node_id = None
         self.raw_path_cost = float("inf")
         self.raw_path_time = 0.0
+        # Keep both success and failure flags for backward compatibility and
+        # to distinguish three cases:
+        #   attempted=False, succeeded=False, failed=False -> no optimizer ran
+        #   attempted=True,  succeeded=True,  failed=False -> optimizer accepted
+        #   attempted=True,  succeeded=False, failed=True  -> optimizer rejected
         self.optimization_attempted = False
+        self.optimization_succeeded = False
         self.optimization_failed = False
 
     def set_optimizer(self, optimizer_function):
@@ -918,6 +1021,7 @@ class ConstrainedDbRRTPlanner(DbRRTPlanner):
         self.trajectory_source = None
         self.optimizer_output_feasible = False
         self.optimization_attempted = False
+        self.optimization_succeeded = False
         self.optimization_failed = False
 
     def _clear_raw_result(self):
@@ -943,10 +1047,11 @@ class ConstrainedDbRRTPlanner(DbRRTPlanner):
             getattr(opt_result, "optimizer_output_feasible", getattr(opt_result, "feasible", False))
         )
         if getattr(opt_result, "feasible", False):
+            self.optimization_succeeded = True
             self.optimized_result = opt_result
             self.optimized_path_view = getattr(opt_result, "path_view", None)
             if self.optimized_path_view is not None:
-                self.path_time = float(getattr(self.optimized_path_view, "path_time", self.path_time))
+                self.path_time = round(self.optimized_path_view.path_time, self.roundoff_digits)
                 self.path_cost = self.path_time
             else:
                 self.path_cost = float(self.raw_path_cost)
@@ -956,6 +1061,31 @@ class ConstrainedDbRRTPlanner(DbRRTPlanner):
             self.goal_node_id = None
             self.path_cost = float("inf")
             self.path_time = 0.0
+
+        if self.print_logs or self.debug_flag:
+            agent_msg = ""
+            if hasattr(self.agent, "id"):
+                agent_msg = f" for agent {self.agent.id}"
+            opt_src = self.trajectory_source
+            if opt_src is not None and str(opt_src).startswith("cpp_dynoplan"):
+                opt_src = "dynoplan"
+            if self.debug_flag:
+                print(
+                    f"Optimizer result{agent_msg}: "
+                    f"attempted={self.optimization_attempted}, "
+                    f"succeeded={self.optimization_succeeded}, "
+                    f"opt_src={opt_src}, "
+                    f"optimizer_output_feasible={self.optimizer_output_feasible}, "
+                    f"final_path_found={self.path_found}, "
+                    f"raw_cost={self.raw_path_cost}, final_cost={self.path_cost}"
+                )
+            else:
+                print(
+                    f"Optimizer result{agent_msg}: "
+                    f"succeeded={self.optimization_succeeded}, "
+                    f"opt_src={opt_src}, "
+                    f"cost={self.raw_path_cost}->{self.path_cost}"
+                )
 
     def set_constraints(self, cons):
         if isinstance(cons, list) and len(cons) == 0:
@@ -985,17 +1115,21 @@ class ConstrainedDbRRTPlanner(DbRRTPlanner):
             return False
         return self.constraint_satisfaction(path, start_time)
 
-    def _compute_best_goal_dist(self):
-        if len(self.tree.nodes) == 0:
-            _, best_goal_dist = self.reached_goal(self.start, self.goal, self.goal_radius, self.agent)
-            return best_goal_dist
-
-        best_goal_dist = float("inf")
-        for node_id in self.tree.nodes:
-            node = self.tree.nodes[node_id]["value"]
-            _, goal_dist = self.reached_goal(node.state, self.goal, self.goal_radius, self.agent)
-            best_goal_dist = min(best_goal_dist, goal_dist)
-        return best_goal_dist
+    def _goal_state_is_safe(self, state, arrival_time):
+        if not super()._goal_state_is_safe(state, arrival_time):
+            return False
+        if not self.use_goal_parking_fix:
+            return True
+        return constraint_satisfaction_parked_numba(
+            self.constraints,
+            state,
+            arrival_time,
+            self.agent.radius,
+            self.minimum_time_step,
+            self.distance_metric_state_size,
+            self.dynamic_agent_clearance,
+            self.roundoff_digits,
+        )
 
     def _search_current_tree(self):
         self.path_found = False
@@ -1006,7 +1140,6 @@ class ConstrainedDbRRTPlanner(DbRRTPlanner):
 
         curr_num_steps = 0
         start_time = time.time()
-        best_goal_dist = self._compute_best_goal_dist()
 
         while curr_num_steps < self.max_iter:
             if time.time() - start_time >= self.planning_time:
@@ -1022,9 +1155,6 @@ class ConstrainedDbRRTPlanner(DbRRTPlanner):
             )
 
             if new_node_id is not None:
-                new_node = self.tree.nodes[new_node_id]["value"]
-                _, goal_dist = self.reached_goal(new_node.state, self.goal, self.goal_radius, self.agent)
-                best_goal_dist = min(best_goal_dist, goal_dist)
                 if self.path_found:
                     break
 

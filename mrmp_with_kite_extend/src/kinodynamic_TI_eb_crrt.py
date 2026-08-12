@@ -4,7 +4,10 @@ from numba import types
 
 from cRRT import CRRT
 from kinodynamic_TI_eb_rrt import KinoTIEBTreeNode
-from utils import euclidean_distance_numba_with_l
+from utils import (
+    euclidean_distance_numba_with_l,
+    fill_geometric_rank_schedule,
+)
 
 
 class CrrtKinoTIEBTreeNode(KinoTIEBTreeNode):
@@ -34,6 +37,7 @@ class KinoTIEBCRRT(CRRT):
                  random_point_function,
                  sort_edges_function,
                  udf_seed=77,
+                 goal_sampling_probability=0.1,
                  dynamic_agent_clearance=0.0,
                  dynamic_obstacles=List.empty_list(types.Array(types.float64, 2, 'C')),
                  eb_kd_trees=None,
@@ -41,6 +45,8 @@ class KinoTIEBCRRT(CRRT):
                  kd_tree_delta_radius=0.5,
                  max_num_edges_per_node=None,
                  num_edge_candidates_per_agent=10,
+                 rank_candidates=True,
+                 use_geometric_candidate_schedule=True,
                  max_joint_edge_trials=20,
                  epsilon_random=0.01,
                  fallback_to_random_control=True,
@@ -83,6 +89,7 @@ class KinoTIEBCRRT(CRRT):
                       reached_goal_function=reached_goal_function,
                       random_point_function=random_point_function,
                       udf_seed=udf_seed,
+                      goal_sampling_probability=goal_sampling_probability,
                       dynamic_agent_clearance=dynamic_agent_clearance,
                       print_logs=print_logs,
                       debug_flag=debug_flag,
@@ -96,11 +103,16 @@ class KinoTIEBCRRT(CRRT):
         self.kd_tree_delta_radius = kd_tree_delta_radius
         self.max_num_edges_per_node = max_num_edges_per_node
 
-        # EB-specific expansion controls. Each agent prepares a small,
-        # approximately evenly spaced set of sorted bundle candidates, then the
-        # centralized planner repairs inter-agent collisions by changing only
-        # agents that actually collided.
+        # EB-specific expansion controls. Each agent prepares a small set of
+        # ranked or unranked bundle candidates using either the geometric
+        # schedule (default) or a linear stride; the centralized planner then
+        # repairs inter-agent collisions by changing only agents that collided.
         self.num_edge_candidates_per_agent = num_edge_candidates_per_agent
+        self.rank_candidates = rank_candidates
+        self.use_geometric_candidate_schedule = bool(
+            use_geometric_candidate_schedule)
+        self.geometric_rank_buffer = np.empty(
+            max(1, self.num_edge_candidates_per_agent), dtype=np.int64)
         self.max_joint_edge_trials = max_joint_edge_trials
         self.epsilon_random = epsilon_random
         self.fallback_to_random_control = fallback_to_random_control
@@ -165,10 +177,21 @@ class KinoTIEBCRRT(CRRT):
         query = self.get_eb_kd_tree_query_funcs[agent_index](parent_agent_state)
         edge_ids = self.eb_kd_trees[agent_index].radius_query(query, 
                                                 self.kd_tree_delta_radius)
-        num_edges = min(len(edge_ids), self.max_num_edges_per_node)
-        parent_node.edge_bundle_indices[agent_index] = edge_ids[:num_edges]
+        if len(edge_ids) > self.max_num_edges_per_node:
+            # Radius-query results have a structured KD-index order. Draw a
+            # uniform subset only when the per-node cache cap is exceeded.
+            edge_ids = self.rng.choice(
+                edge_ids,
+                size=self.max_num_edges_per_node,
+                replace=False,
+            )
+        # An uncapped, unranked query keeps one randomized candidate order for
+        # this node/agent cache. A capped query is already randomized by choice.
+        elif not self.rank_candidates and len(edge_ids) > 1:
+            self.rng.shuffle(edge_ids)
+        parent_node.edge_bundle_indices[agent_index] = edge_ids
         parent_node.edge_bundle_mask[agent_index] = np.full(
-            (num_edges,), False, dtype=bool)
+            (len(edge_ids),), False, dtype=bool)
 
     def _try_agent_edge(self, parent_node, agent_index, edge_bundle_index,
                         mask_index, curr_edge_mask, debug_prefix):
@@ -221,11 +244,11 @@ class KinoTIEBCRRT(CRRT):
 
     def _collect_agent_candidate_mask_indices(self, parent_node, agent_index,
                                               random_point):
-        # Build only the p-spaced candidate index set for one agent. This does
-        # not propagate any edge yet; propagation is delayed until the joint
-        # repair loop actually selects a candidate. The sort function orders
-        # nearby EB edges by the distance between their translated endpoint and
-        # this agent's slice of the sampled joint random point.
+        # Build a small candidate-index set for one agent. This does not
+        # propagate any edge yet; propagation is delayed until the joint repair
+        # loop actually selects a candidate. The callback either ranks nearby
+        # EB edges by translated-endpoint distance or returns their unranked
+        # cached order.
         self._ensure_agent_edge_cache(parent_node, agent_index)
 
         eb = self.edge_bundles[agent_index]
@@ -241,9 +264,9 @@ class KinoTIEBCRRT(CRRT):
         position_end = position_start + self.agent_position_state_dim
         agent_random_point = random_point[position_start:position_end]
 
-        sorted_indices, num_valid_edges = self.sort_edges[agent_index](
+        candidate_indices, num_valid_edges = self.sort_edges[agent_index](
             parent_agent_state,agent_random_point,
-            eb.start_states,eb.final_states,
+            eb.start_states,eb.final_states,eb.timesteps,
             curr_edge_indices,curr_edge_mask,
             self.distance_array[agent_index])
 
@@ -255,21 +278,31 @@ class KinoTIEBCRRT(CRRT):
             return np.empty(0, dtype=np.int64)
 
         num_samples = max(1, self.num_edge_candidates_per_agent)
-        stride = max(1, num_valid_edges // num_samples)
-        num_candidates = min(num_samples,
-                             ((num_valid_edges - 1) // stride) + 1)
-        candidate_mask_indices = np.empty(num_candidates, dtype=np.int64)
+        order = candidate_indices
 
-        # Walk through the sorted list at an even stride, collecting up to
-        # num_edge_candidates_per_agent edge ids. This keeps the local search
-        # small without paying for dynamics propagation until a candidate is
-        # actually used in a joint trial.
-        write_index = 0
-        for sorted_index in range(0, num_valid_edges, stride):
-            if write_index >= num_candidates:
-                break
-            candidate_mask_indices[write_index] = sorted_indices[sorted_index]
-            write_index += 1
+        if self.use_geometric_candidate_schedule:
+            num_candidates = fill_geometric_rank_schedule(
+                num_valid_edges, num_samples, self.geometric_rank_buffer)
+            candidate_mask_indices = np.empty(
+                num_candidates, dtype=np.int64)
+            for write_index in range(num_candidates):
+                rank = self.geometric_rank_buffer[write_index]
+                candidate_mask_indices[write_index] = order[rank]
+        else:
+            stride = max(1, num_valid_edges // num_samples)
+            num_candidates = min(
+                num_samples, ((num_valid_edges - 1) // stride) + 1)
+            candidate_mask_indices = np.empty(
+                num_candidates, dtype=np.int64)
+
+            # Walk through the candidate order at an even stride, collecting
+            # up to num_edge_candidates_per_agent edge ids.
+            write_index = 0
+            for sorted_index in range(0, num_valid_edges, stride):
+                if write_index >= num_candidates:
+                    break
+                candidate_mask_indices[write_index] = order[sorted_index]
+                write_index += 1
 
         return candidate_mask_indices
 
@@ -424,7 +457,7 @@ class KinoTIEBCRRT(CRRT):
         return False
 
     def _select_edge_bundle_joint_candidate(self, parent_node, random_point):
-        # First create a small sorted EB candidate-index list for every agent.
+        # First create a small EB candidate-index list for every agent.
         # These are just indices into the node-local EB cache, not propagated
         # paths. Dynamics rollouts are performed lazily below.
         active_agent_indices = self._active_agent_indices(parent_node)
@@ -441,7 +474,7 @@ class KinoTIEBCRRT(CRRT):
             agent_candidate_mask_indices = []
             agent_candidate_caches = []
 
-        # Collect sorted, p-spaced EB candidate indices for active agents only.
+        # Collect scheduled EB candidate indices for active agents only.
         for agent_index in active_agent_indices:
             candidate_mask_indices = self._collect_agent_candidate_mask_indices(
                 parent_node, agent_index, random_point)

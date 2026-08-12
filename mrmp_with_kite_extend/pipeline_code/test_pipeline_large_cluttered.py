@@ -184,17 +184,17 @@ from agent_builders import *
 
 if __name__ == "__main__":
     planning_time = 300.0  
-    save_root = "test_results/new_final_results/large_cluttered_env"
+    save_root = "paper_results/results_9June2026/large_cluttered_env"
+    # save_root = "paper_results/free_time/large_cluttered_env"
     test_rounds = 100
     gr = 0.5
-    kd_tree_delta_radius = .10
+    kd_tree_delta_radius = .10 
     seed_multiplier = 200
-    num_processes = 25
     survival_min_successes = 1
 
     agent_builders = [
                     SecondOrderCarBuilder(),
-                    UnicycleBuilder()
+                    # UnicycleBuilder()
                     ]
     
     surviving_classes = {}
@@ -221,8 +221,17 @@ if __name__ == "__main__":
                 failed.append(test_class.name)
         return failed
 
-    for agent_count in [4, 5, 8, 10, 15, 20, 25, 30]:
+    def get_num_processes(agent_count):
+        # if agent_count <= 10:
+        #     return 100
+        # if agent_count < 20:
+        #     return 50
+        # return 30
+        return 20
+
+    for agent_count in [2, 3, 4, 5, 8, 10, 12, 15, 18, 20, 23, 25, 27, 30]:
         master_seed = agent_count * seed_multiplier
+        num_processes = get_num_processes(agent_count)
 
         for agent_builder in agent_builders:
             # agent_count = 15
@@ -244,7 +253,13 @@ if __name__ == "__main__":
                 test_classes = [
                     KcbsTestClass(max_planning_time=planning_time, obs_buffers=False), 
                     KcbsKinoTiEbTestClass(max_planning_time=planning_time, obs_buffers=False),
-                    KcbsDbrrtTestClass(max_planning_time=planning_time, obs_buffers=False),
+                    KcbsDbrrtTestClass(max_planning_time=planning_time, obs_buffers=False,
+                        optimizer_backend="cpp_dynoplan",
+                        cpp_optimizer_options=CppDynoplanUnicycleOptimizerOptions(
+                            solver_id_static=1,
+                            solver_id_constrained=0,
+                        ),
+                    ),
                     PrrtTestClass(max_planning_time=planning_time, obs_buffers=False),
                     PrioritizedKinoTIRRTTestClass(max_planning_time=planning_time, obs_buffers=False),
                     CRRTTestClass(max_planning_time=planning_time,
@@ -284,18 +299,28 @@ if __name__ == "__main__":
                                     num_agents=agent_count, 
                                     master_seed=master_seed,
                                     savepath=savepath, goal_radius=gr, processes=num_processes)
+            extra_experiment_config = {
+                "agent_type": agent_builder.name,
+                "planning_time": planning_time,
+                "kd_tree_delta_radius": kd_tree_delta_radius,
+                "seed_multiplier": seed_multiplier,
+                "survival_min_successes": survival_min_successes,
+                "num_processes": num_processes,
+            }
+            if isinstance(agent_builder, UnicycleBuilder):
+                extra_experiment_config.update({
+                    "dbrrt_optimizer_backend": "cpp_dynoplan",
+                    "dbrrt_optimizer_static_time_mode": "free_time",
+                    "dbrrt_optimizer_constrained_time_mode": "fixed_time",
+                    "dbrrt_solver_id_static": 1,
+                    "dbrrt_solver_id_constrained": 0,
+                })
             write_pipeline_manifest(
                 pipeline=tp,
                 savepath=savepath,
                 pipeline_file=__file__,
                 environment_name="large_cluttered_env",
-                extra_experiment_config={
-                    "agent_type": agent_builder.name,
-                    "planning_time": planning_time,
-                    "kd_tree_delta_radius": kd_tree_delta_radius,
-                    "seed_multiplier": seed_multiplier,
-                    "survival_min_successes": survival_min_successes,
-                },
+                extra_experiment_config=extra_experiment_config,
             )
             with open(savepath+'/log.txt', 'w') as f, redirect_stdout(f):
                 tp.run()

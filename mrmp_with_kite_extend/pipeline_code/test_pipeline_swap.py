@@ -52,10 +52,23 @@ class TestPipelineOpen(TestPipeline):
                 starts, goals, goal_radii, goal_area
         """
         goal_radius = self.goal_radius
-        thetas = [ (2 * np.pi / self.num_agents) * i for i in range(self.num_agents) ]
         radius = ((self.env_width + self.env_bredth) / 2) / 2 - 1.0
-        possible_starts = [ (self.env_width/2 + radius * np.cos(theta), 
-                             self.env_bredth/2 + radius * np.sin(theta)) for theta in thetas]
+        center = (self.env_width / 2, self.env_bredth / 2)
+        num_even_agents = self.num_agents if self.num_agents % 2 == 0 else self.num_agents - 1
+        thetas = [(2 * np.pi / num_even_agents) * i for i in range(num_even_agents)]
+        possible_starts = [(center[0] + radius * np.cos(theta),
+                            center[1] + radius * np.sin(theta)) for theta in thetas]
+        possible_goals = list(possible_starts)
+
+        if self.num_agents % 2 == 1:
+            extra_theta = np.pi / num_even_agents
+            extra_start = (center[0] + radius * np.cos(extra_theta),
+                           center[1] + radius * np.sin(extra_theta))
+            extra_goal = (center[0] - radius * np.cos(extra_theta),
+                          center[1] - radius * np.sin(extra_theta))
+            possible_starts.append(extra_start)
+            possible_goals.append(extra_goal)
+            thetas.append(extra_theta)
 
         starts = []
         goals = []
@@ -68,8 +81,11 @@ class TestPipelineOpen(TestPipeline):
 
         for i in agent_id_order:
             starts.append(agents[i].get_start(0, 0, 0, None, x=possible_starts[i][0], y=possible_starts[i][1], t = self.wrap(thetas[i]+np.pi, 2*np.pi)))  
-            goal_index = round(self.wrap(i + self.num_agents//2, self.num_agents))
-            goals.append(possible_starts[goal_index])
+            if i < num_even_agents:
+                goal_index = round(self.wrap(i + num_even_agents//2, num_even_agents))
+                goals.append(possible_goals[goal_index])
+            else:
+                goals.append(possible_goals[i])
             goal_radii.append(goal_radius)
 
         return starts, goals, goal_radii, goal_area
@@ -110,16 +126,17 @@ from contextlib import redirect_stdout
     
 if __name__ == "__main__":
     agent_builders = [
-                        SecondOrderCarBuilder(),
+                        # SecondOrderCarBuilder(),
                         UnicycleBuilder()
                       ]
     planning_time = 300.0
-    save_root = "test_results/new_final_results/swap_env"
+    save_root = "paper_results/results_9June2026/swap_env"
+    # save_root = "paper_results/debug/swap_env_soc/"
+    # save_root = "paper_results/free_time/swap_env"
     test_rounds = 100
     gr = 0.5
     kd_tree_delta_radius = .10
-    seed_multiplier = 200
-    num_processes = 25
+    seed_multiplier = 100 #I used 100 for Unicycle and 200 for SOC
     survival_min_successes = 1
     env_dim = 20
 
@@ -147,8 +164,16 @@ if __name__ == "__main__":
                 failed.append(test_class.name)
         return failed
 
-    for agent_count in [3, 4, 5, 8, 10, 15, 20, 25, 30]:
+    def get_num_processes(agent_count):
+        # if agent_count <= 10:
+        #     return 100
+        # return 25
+        return 10
+
+    for agent_count in [2, 3, 4, 5, 8, 10, 12, 15, 18, 20, 23, 25, 27, 30]:
         master_seed = agent_count * seed_multiplier
+        num_processes = get_num_processes(agent_count)
+        # num_processes = 50 if agent_count < 18 else 25
 
         for agent_builder in agent_builders:
             savepath = os.path.join(
@@ -165,10 +190,19 @@ if __name__ == "__main__":
             test_classes = []
             survival_key = get_survival_key(agent_builder)
             if isinstance(agent_builder, UnicycleBuilder):
-                test_classes =  [
-                    KcbsTestClass(max_planning_time=planning_time, obs_buffers=False), 
-                    KcbsKinoTiEbTestClass(max_planning_time=planning_time, obs_buffers=False),
-                    KcbsDbrrtTestClass(max_planning_time=planning_time, obs_buffers=False),
+                test_classes = [
+                    KcbsTestClass(max_planning_time=planning_time, obs_buffers=False,
+                        goal_sampling_probability=0.01),
+                    KcbsKinoTiEbTestClass(max_planning_time=planning_time, obs_buffers=False,
+                        goal_sampling_probability=0.01),
+                    KcbsDbrrtTestClass(max_planning_time=planning_time, obs_buffers=False,
+                        goal_sampling_probability=0.01,
+                        optimizer_backend="cpp_dynoplan",
+                        cpp_optimizer_options=CppDynoplanUnicycleOptimizerOptions(
+                            solver_id_static=1,
+                            solver_id_constrained=0,
+                        ),
+                    ),
                     PrrtTestClass(max_planning_time=planning_time, obs_buffers=False),
                     PrioritizedKinoTIRRTTestClass(max_planning_time=planning_time, obs_buffers=False),
                     CRRTTestClass(max_planning_time=planning_time,
@@ -209,19 +243,29 @@ if __name__ == "__main__":
             tp = TestPipelineOpen(test_classes, [agent_builder], test_rounds=test_rounds, num_agents=agent_count, 
                                     master_seed=master_seed, env_width=env_dim, env_bredth=env_dim,
                                     savepath=savepath, goal_radius=gr, processes=num_processes)
+            extra_experiment_config = {
+                "agent_type": agent_builder.name,
+                "planning_time": planning_time,
+                "kd_tree_delta_radius": kd_tree_delta_radius,
+                "seed_multiplier": seed_multiplier,
+                "survival_min_successes": survival_min_successes,
+                "num_processes": num_processes,
+                "env_dim": env_dim,
+            }
+            if isinstance(agent_builder, UnicycleBuilder):
+                extra_experiment_config.update({
+                    "dbrrt_optimizer_backend": "cpp_dynoplan",
+                    "dbrrt_optimizer_static_time_mode": "free_time",
+                    "dbrrt_optimizer_constrained_time_mode": "fixed_time",
+                    "dbrrt_solver_id_static": 1,
+                    "dbrrt_solver_id_constrained": 0,
+                })
             write_pipeline_manifest(
                 pipeline=tp,
                 savepath=savepath,
                 pipeline_file=__file__,
                 environment_name="swap_env",
-                extra_experiment_config={
-                    "agent_type": agent_builder.name,
-                    "planning_time": planning_time,
-                    "kd_tree_delta_radius": kd_tree_delta_radius,
-                    "seed_multiplier": seed_multiplier,
-                    "survival_min_successes": survival_min_successes,
-                    "env_dim": env_dim,
-                },
+                extra_experiment_config=extra_experiment_config,
             )
             with open(savepath+'/log.txt', 'w') as f, redirect_stdout(f):
                 tp.run()

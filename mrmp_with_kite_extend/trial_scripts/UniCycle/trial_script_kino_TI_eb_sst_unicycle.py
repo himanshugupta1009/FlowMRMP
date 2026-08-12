@@ -48,7 +48,7 @@ kd_tree_TI_eb_unicycle = CircularAngleIndexNumba(thetas, ids=edge_ids)
 
 s = np.random.randint(0, 1000)
 print("Seed: ", s)
-kino_eb_sst  = EB_SST( 
+kino_eb_sst  = KiteSST( 
             start=start, goal=goal,
             goal_radius=goal_radius,
             env = env, agent=agent, 
@@ -77,6 +77,9 @@ kino_eb_sst  = EB_SST(
             )
 
 kino_eb_sst.plan_path()
+print("First solution planning time:", kino_eb_sst.first_solution_planning_time)
+print("First solution path cost:", kino_eb_sst.first_solution_path_cost)
+print("Final path cost:", kino_eb_sst.path_cost)
 node_ids, states, actions, timesteps = kino_eb_sst.get_path()
 
 printer = SSTPrinter(env, kino_eb_sst)
@@ -107,7 +110,7 @@ from pyinstrument import Profiler
 
 s = np.random.randint(0, 1000)
 print("Seed: ", s)
-kino_eb_sst  = EB_SST( 
+kino_eb_sst  = KiteSST( 
             start=start, goal=goal,
             goal_radius=goal_radius,
             env = env, agent=agent, 
@@ -139,5 +142,8 @@ p = Profiler()
 p.start()
 kino_eb_sst.plan_path()
 p.stop()
+print("First solution planning time:", kino_eb_sst.first_solution_planning_time)
+print("First solution path cost:", kino_eb_sst.first_solution_path_cost)
+print("Final path cost:", kino_eb_sst.path_cost)
 print(p.output_text(unicode=True, color=True))
 p.open_in_browser()  

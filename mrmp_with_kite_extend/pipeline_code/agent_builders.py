@@ -142,6 +142,7 @@ class UnicycleBuilder(AgentBuilder):
                  motion_primitive_file_location = 'motion_primitives/unicycle1_v0__ispso__2023_04_03__14_56_57.bin.im.bin.im.bin.msgpack',
                  num_motion_primitives=30000, #From the dbRRT motion primitives
                  motion_primitive_dt=0.1, #dbRRT motion primitive time step
+                 sort_edges=True,
                  ):
         super().__init__()
 
@@ -152,6 +153,7 @@ class UnicycleBuilder(AgentBuilder):
         self.radius = radius
         self.sampling_time_step = sampling_time_step
         self.num_skip_edges = num_skip_edges
+        self.sort_edges = sort_edges
 
         self.num_edges = num_edges
         self.edge_bundle_file_location = edge_bundle_file_location
@@ -199,18 +201,28 @@ class UnicycleBuilder(AgentBuilder):
         return UniCycle.sort_edges
 
     def get_edge_bundle(self):
-        if self.seed in UnicycleBuilder.edge_bundles:
-            return UnicycleBuilder.edge_bundles[self.seed]
+        cache_key = (
+            self.seed,
+            self.edge_bundle_file_location,
+            self.num_edges,
+        )
+        if cache_key in UnicycleBuilder.edge_bundles:
+            return UnicycleBuilder.edge_bundles[cache_key]
 
         data = np.load(self.edge_bundle_file_location, allow_pickle=True)
         eb = EdgeBundle(data, fix_num_edges=self.num_edges,
                         rng_seed=self.seed * 67, use_all_edges=False)
-        UnicycleBuilder.edge_bundles[self.seed] = eb
+        UnicycleBuilder.edge_bundles[cache_key] = eb
         return eb
     
     def get_kino_ti_edge_bundle(self):
-        if self.seed in UnicycleBuilder.kino_ti_edge_bundles:
-            return UnicycleBuilder.kino_ti_edge_bundles[self.seed]
+        cache_key = (
+            self.seed,
+            self.kino_ti_edge_bundle_file_location,
+            self.kd_num_edges,
+        )
+        if cache_key in UnicycleBuilder.kino_ti_edge_bundles:
+            return UnicycleBuilder.kino_ti_edge_bundles[cache_key]
 
         data = np.load(self.kino_ti_edge_bundle_file_location, allow_pickle=True)
         kino_ti_edge_bundle = EdgeBundle(data, fix_num_edges=self.kd_num_edges,
@@ -220,7 +232,7 @@ class UnicycleBuilder(AgentBuilder):
         kd_tree_ti_edge_bundle = CircularAngleIndexNumba(thetas, ids=edge_ids)
 
         eb = (kino_ti_edge_bundle, kd_tree_ti_edge_bundle)
-        UnicycleBuilder.kino_ti_edge_bundles[self.seed] = eb
+        UnicycleBuilder.kino_ti_edge_bundles[cache_key] = eb
         return eb
     
     def get_dbrrt_motion_primitives(self):
@@ -270,7 +282,7 @@ class SecondOrderCarBuilder(AgentBuilder):
 
     def __init__(self, max_speed=1., max_acceleration = 2., 
                  max_phi = np.pi/3, max_steering_rate = 0.5,
-                 wheelbase=0.7, radius=0.3, 
+                 wheelbase=0.6, radius=0.3,
                  kino_ti_edge_bundle_file_location='edge_bundles_unclamped/eb_second_order_car_kinodynamic_TI_edges_100000.npz', 
                  sampling_time_step=2.0,
                  kd_num_edges=50000, #From the kinodynamic edge bundle
@@ -326,8 +338,15 @@ class SecondOrderCarBuilder(AgentBuilder):
         raise Exception("Non-Kino Edge Bundles don't work with the Second Order Car")
     
     def get_kino_ti_edge_bundle(self):
-        if self.seed in SecondOrderCarBuilder.kino_ti_edge_bundles:
-            return SecondOrderCarBuilder.kino_ti_edge_bundles[self.seed]
+        cache_key = (
+            self.seed,
+            self.kino_ti_edge_bundle_file_location,
+            self.kd_num_edges,
+            self.max_speed,
+            self.max_phi,
+        )
+        if cache_key in SecondOrderCarBuilder.kino_ti_edge_bundles:
+            return SecondOrderCarBuilder.kino_ti_edge_bundles[cache_key]
 
         data = np.load(self.kino_ti_edge_bundle_file_location, allow_pickle=True)
         kino_ti_edge_bundle = EdgeBundle(data, fix_num_edges=self.kd_num_edges,
@@ -341,7 +360,7 @@ class SecondOrderCarBuilder(AgentBuilder):
                     v_scale=v_scale, phi_scale=phi_scale)
         
         eb = (kino_ti_edge_bundle, kd_tree_ti_edge_bundle)
-        SecondOrderCarBuilder.kino_ti_edge_bundles[self.seed] = eb
+        SecondOrderCarBuilder.kino_ti_edge_bundles[cache_key] = eb
         return eb
     
     def get_start(self, env_width, env_bredth, buffer,
@@ -365,7 +384,7 @@ class QuadcopterBuilder(AgentBuilder):
     kino_ti_edge_bundles = {}
     dbrrt_motion_primitives = {}
 
-    def __init__(self, max_speed=0.5, max_acceleration = 2., radius=0.1,
+    def __init__(self, max_speed=0.5, max_acceleration = 2., radius=0.3,
                  kino_ti_edge_bundle_file_location='edge_bundles_unclamped/eb_quadcopter6d_kinodynamic_TI_edges_200000.npz', 
                  sampling_time_step=1.0,
                  kd_num_edges=100000, #From the kinodynamic edge bundle
@@ -373,6 +392,7 @@ class QuadcopterBuilder(AgentBuilder):
                  motion_primitive_file_location='motion_primitives/quadcopter6d_long_50_1000_primitives.npz',
                  num_motion_primitives=1000, #From the dbRRT motion primitives
                  motion_primitive_dt=0.1, #dbRRT motion primitive time step
+                 sort_edges=True,
                 ):
         super().__init__()
         
@@ -380,6 +400,7 @@ class QuadcopterBuilder(AgentBuilder):
         self.radius = radius
         self.max_acceleration = max_acceleration
         self.num_skip_edges = num_skip_edges
+        self.sort_edges = sort_edges
         self.sampling_time_step = sampling_time_step
 
         self.name = "QUAD"
@@ -421,8 +442,14 @@ class QuadcopterBuilder(AgentBuilder):
         raise Exception("Non-Kino Edge Bundles don't work with the Second Order Car")
     
     def get_kino_ti_edge_bundle(self):
-        if self.seed in QuadcopterBuilder.kino_ti_edge_bundles:
-            return QuadcopterBuilder.kino_ti_edge_bundles[self.seed]
+        cache_key = (
+            self.seed,
+            self.kino_ti_edge_bundle_file_location,
+            self.kd_num_edges,
+            self.max_speed,
+        )
+        if cache_key in QuadcopterBuilder.kino_ti_edge_bundles:
+            return QuadcopterBuilder.kino_ti_edge_bundles[cache_key]
 
         data = np.load(self.kino_ti_edge_bundle_file_location, allow_pickle=True)
         kino_ti_edge_bundle = EdgeBundle(data, fix_num_edges=self.kd_num_edges,
@@ -443,7 +470,7 @@ class QuadcopterBuilder(AgentBuilder):
                         )
         
         eb = (kino_ti_edge_bundle, kd_tree_TI_eb)
-        QuadcopterBuilder.kino_ti_edge_bundles[self.seed] = eb
+        QuadcopterBuilder.kino_ti_edge_bundles[cache_key] = eb
         return eb
 
     def get_dbrrt_motion_primitives(self):

@@ -73,24 +73,13 @@ class VPhiTree:
         q = self._embed_query(query)
         cand_idx = self.tree.query_ball_point(q, r=delta)
 
-        # m = len(cand_idx)
-        # if m == 0:
-        #     return self._empty_idx
-
-        # buffer = self._candidate_indices_buffer
-        # for i in range(m):
-        #     buffer[i] = cand_idx[i]
-
-        # return self.ids[cand_idx]
-        # return cand_idx
-        # return buffer[:m].copy() 
-        # Used copy above to avoid overwriting output from past calls 
-        # in future calls
-
+        # cKDTree returns positions in its input array, not values from
+        # self.ids. All current builders pass ids=np.arange(n), so those
+        # positions are the desired edge IDs and returning them directly
+        # avoids a second advanced-indexing allocation. This becomes incorrect
+        # if the tree is ever constructed with reordered or noncontiguous IDs;
+        # that case must instead return self.ids[candidate_indices].
         return np.asarray(cand_idx, dtype=np.int64)
-        #Note - this only returns the indices in the kd-tree, not the original IDs
-        #However, in our usage, the indices in the kd-tree correspond to the original IDs.
-        #So it works for now. But be careful if you use this class elsewhere.
 
 
 

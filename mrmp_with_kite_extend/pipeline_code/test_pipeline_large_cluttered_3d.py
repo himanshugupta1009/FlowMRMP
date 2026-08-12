@@ -11,8 +11,9 @@ import sys
 sys.path.append('src')
 
 from Environments import *
-from agent_builders import QuadcopterBuilder
-
+from printer_3d import MultiRRTPrinter3d
+from test_classes import *
+from agent_builders import *
 
 class TestPipeline3d(TestPipeline):
     def __init__(self, test_classes, agent_builders=[QuadcopterBuilder()], test_rounds=100, num_agents=5, master_seed=42, 
@@ -89,11 +90,11 @@ class TestPipeline3d(TestPipeline):
             (13.0, 1.0, 7.6), 
             (1.0, 1.0, 1.6), 
             (7.0, 13.0, 5.6), 
-            (7.0, 7.0, 8.6),
+            (6.8, 7.0, 8.6),
             (11.0, 2.0, 2.5),
-            (2.5, 3.5, 0.8),
+            (2.5, 3.0, 0.8),
             (12.5, 11.5, 8.0),
-            (1.5, 7.5, 4.0),
+            (2.0, 7.4, 4.0),
             (2.0, 1.5, 3.0),
             (10.0, 1.0, 5.5),
             (1.5, 12.0, 7.0),
@@ -172,18 +173,37 @@ class TestPipeline3d(TestPipeline):
         return agents, starts, obstacles, goals, goal_radii
     
 
-from test_classes import *
-from agent_builders import *
-
 if __name__ == "__main__":
-    agent_builders = [QuadcopterBuilder()]
+    agent_builders = [
+        # QuadcopterBuilder(
+        #     motion_primitive_file_location="motion_primitives/quadcopter6d_long_50_1000_primitives.npz",
+        #     num_motion_primitives=1000,
+        #     radius=0.3,),
+        # QuadcopterBuilder(
+        #     motion_primitive_file_location="motion_primitives/quadcopter6d_dbcbs_15_1100_primitives.npz",
+        #     num_motion_primitives=1100,
+        #     radius=0.3,),
+        QuadcopterBuilder(
+            motion_primitive_file_location="motion_primitives/quadcopter6d_long_50_max_length_6000_primitives.npz",
+            num_motion_primitives=6000,
+            radius=0.3,),
+    ]
     planning_time = 300.0
-    save_root = "test_results/new_final_results/large_cluttered_3d_env"
     test_rounds = 100
-    gr = 0.3
+    gr = 0.5
+    optimizer_static_time_mode = "fixed_time"
+    optimizer_constrained_time_mode = "fixed_time"
+    optimizer_solver_ids = {
+        "fixed_time": 0,
+        "free_time": 1,
+    }
+    solver_id_static = optimizer_solver_ids[optimizer_static_time_mode]
+    solver_id_constrained = optimizer_solver_ids[optimizer_constrained_time_mode]
+    save_root = f"paper_results/results_9June2026/large_cluttered_3d_env/MP_6000_{optimizer_static_time_mode}"
+    # save_root = "paper_results/tests_kcbs_dbRRT_quad/MP_6000/AR_0p3_GR_0p5/large_cluttered_3d_env"
+    # save_root = "paper_results/tests_kcbs_dbRRT_quad/MP_1100/AR_0p3_GR_0p5/large_cluttered_3d_env"
     kd_tree_delta_radius = .10
     seed_multiplier = 200
-    num_processes = 30
     survival_min_successes = 1
     surviving_classes = {}
     surviving_classes[QuadcopterBuilder] = None
@@ -203,8 +223,16 @@ if __name__ == "__main__":
                 failed.append(test_class.name)
         return failed
 
-    for agent_count in [2, 3, 4, 5, 6, 8, 10, 15, 20, 25, 30]:
+    def get_num_processes(agent_count):
+        # if agent_count <= 10:
+        #     return 100
+        # if agent_count < 20:
+        #     return 50
+        return 20
+
+    for agent_count in [2, 3, 4, 5, 8, 10, 12, 15, 18, 20, 23, 25, 27, 30]:
         master_seed = agent_count * seed_multiplier
+        num_processes = get_num_processes(agent_count)
 
         for agent_builder in agent_builders:
             savepath = os.path.join(
@@ -221,7 +249,13 @@ if __name__ == "__main__":
             test_classes = [
                 KcbsTestClass(max_planning_time=planning_time, obs_buffers=False), 
                 KcbsKinoTiEbTestClass(max_planning_time=planning_time, obs_buffers=False),
-                KcbsDbrrtTestClass(max_planning_time=planning_time, obs_buffers=False),
+                KcbsDbrrtTestClass(max_planning_time=planning_time, obs_buffers=False,
+                    optimizer_backend="cpp_dynoplan",
+                    cpp_optimizer_options=CppDynoplanQuadcopter6DOptimizerOptions(
+                        solver_id_static=solver_id_static,
+                        solver_id_constrained=solver_id_constrained,
+                    ),
+                ),
                 PrrtTestClass(max_planning_time=planning_time, obs_buffers=False),
                 PrioritizedKinoTIRRTTestClass(max_planning_time=planning_time, obs_buffers=False),
                 CRRTTestClass(max_planning_time=planning_time,
@@ -243,19 +277,29 @@ if __name__ == "__main__":
             tp = TestPipeline3d(test_classes, [agent_builder], test_rounds=test_rounds, 
                                 num_agents=agent_count, master_seed=master_seed,
                                 savepath=savepath, goal_radius=gr, processes=num_processes)
+            extra_experiment_config = {
+                "agent_type": agent_builder.name,
+                "planning_time": planning_time,
+                "kd_tree_delta_radius": kd_tree_delta_radius,
+                "seed_multiplier": seed_multiplier,
+                "survival_min_successes": survival_min_successes,
+                "num_processes": num_processes,
+                "obs": tp.obs,
+            }
+            if isinstance(agent_builder, QuadcopterBuilder):
+                extra_experiment_config.update({
+                    "dbrrt_optimizer_backend": "cpp_dynoplan",
+                    "dbrrt_optimizer_static_time_mode": optimizer_static_time_mode,
+                    "dbrrt_optimizer_constrained_time_mode": optimizer_constrained_time_mode,
+                    "dbrrt_solver_id_static": solver_id_static,
+                    "dbrrt_solver_id_constrained": solver_id_constrained,
+                })
             write_pipeline_manifest(
                 pipeline=tp,
                 savepath=savepath,
                 pipeline_file=__file__,
                 environment_name="large_cluttered_3d_env",
-                extra_experiment_config={
-                    "agent_type": agent_builder.name,
-                    "planning_time": planning_time,
-                    "kd_tree_delta_radius": kd_tree_delta_radius,
-                    "seed_multiplier": seed_multiplier,
-                    "survival_min_successes": survival_min_successes,
-                    "obs": tp.obs,
-                },
+                extra_experiment_config=extra_experiment_config,
             )
             with open(savepath+'/log.txt', 'w') as f, redirect_stdout(f):
                 tp.run()

@@ -30,11 +30,11 @@ joint_states = [] # joint states for each body
 TURTLEBOT_NH_URDF = pybullet_utils.join_paths(pybullet_utils.MODEL_DIRECTORY, 'turtlebot/turtlebot.urdf')
 
 
-from edge_bundle import EdgeBundleTraj
+from edge_bundle import EdgeBundle
 import numpy as np
 edge_bundle_file_location = 'edge_bundles/eb_pb_turtle_speed_20_edges-10000.npz' 
 data = np.load(edge_bundle_file_location, allow_pickle=True)
-eb_turtle = EdgeBundleTraj(data, fix_num_edges=5)
+eb_turtle = EdgeBundle(data, fix_num_edges=5)
 
 def hex_to_rgba(hex_color):
         col_val = [int(hex_color[i:i+2], 16)/(2**8 - 1) for i in (0, 2, 4)] + [1]
@@ -161,7 +161,7 @@ while (1):
                         # p.resetBasePositionAndOrientation(turtle, *newpos)
                         # p.resetBaseVelocity(turtle, *base_v)
                         for i in range(eb_turtle.num_edges):
-                                traj = eb_turtle.get_trajectory(i)
+                                traj = eb_turtle.trajectories[i]
                                 cont, _, _ = eb_turtle.get_edge(i)
                                 print("Control: " + str(cont))
                                 for j in range(len(traj)):

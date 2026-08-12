@@ -28,10 +28,12 @@ from franka_paths import (
     DEFAULT_URDF,
 )
 
-if str(FLOWMRMP_SRC) not in sys.path:
-    sys.path.insert(0, str(FLOWMRMP_SRC))
+MAIN_SCRIPTS = Path(__file__).resolve().parents[1]
+for module_path in (MAIN_SCRIPTS, FLOWMRMP_SRC):
+    if str(module_path) not in sys.path:
+        sys.path.insert(0, str(module_path))
 
-from Agents.FrankaPanda import (  # noqa: E402
+from FrankaPanda import (  # noqa: E402
     DDQ_MAX,
     DQ_MAX,
     Q_LOWER,
@@ -122,7 +124,10 @@ def normalized_limit_margin(states: np.ndarray) -> float:
 def is_collision_free(
     states: np.ndarray, checker: FrankaSelfCollisionChecker
 ) -> bool:
-    return all(not checker.in_collision(state[:7]) for state in states)
+    positions = np.asarray(states[:, :7], dtype=np.float64)
+    if hasattr(checker, "collision_free_mask"):
+        return bool(np.all(checker.collision_free_mask(positions)))
+    return all(not checker.in_collision(position) for position in positions)
 
 
 def percentile_summary(values: list[float] | np.ndarray) -> dict[str, float]:

@@ -1,0 +1,29 @@
+{
+  "created_utc": "2026-08-12T14:47:13.255881+00:00",
+  "planning_time_seconds_total_per_four_arm_trial": 30.0,
+  "goal_radius": 0.4,
+  "num_evaluation_seeds": 20,
+  "seed_base": 2026082200,
+  "coordinations": [
+    "prioritized",
+    "crrt",
+    "kcbs"
+  ],
+  "base_planners": [
+    "vanilla",
+    "flow"
+  ],
+  "problem_ids": [
+    0,
+    1,
+    2
+  ],
+  "dataset": "C:\\Users\\sodan\\Downloads\\dataset200k.h5",
+  "dataset_sha256": "8af36a91b832fe52f12d25ec38dec605525e669e2f97c1573ca2feee5de89d92",
+  "problems": "C:\\Projects\\FrankaFM\\results\\franka_obstacle\\four_franka_multi_planner_problems_final_v3_20260812\\four_franka_easy_medium_hard.npz",
+  "problems_sha256": "ab2902605e87a0ee85d8ca26bf2420ee208bddacc815ea97c8a5b435188bb55b",
+  "checkpoint": "C:\\Projects\\FrankaFM\\checkpoints\\franka_edge_flow\\franka_edge_flow_k32_200k_pool128_n350000_max50_fullvalid_mps_v1\\best_inference.pt",
+  "checkpoint_sha256": "42415cad616ba0cce6cb8ba0dbddea094c00bc5516d5aeae983d1522ae95bf49",
+  "collision_backend": "cuRobo API + exact batched 295-sphere world overlap",
+  "pybullet_used": false
+}

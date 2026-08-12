@@ -601,14 +601,17 @@ class TestPipeline():
 
         all_failed = []
 
+        def as_float_array(values):
+            return np.asarray([np.nan if value is None else value for value in values], dtype=float)
+
         for test_class in self.test_classes:
             output += (test_class.name + ":\n")
             if len(test_class.success) > 0:
-                times = np.asarray(list(dict(sorted(test_class.times.items())).values()))
-                costs = np.asarray(list(dict(sorted(test_class.costs.items())).values()))
+                times = as_float_array(list(dict(sorted(test_class.times.items())).values()))
+                costs = as_float_array(list(dict(sorted(test_class.costs.items())).values()))
                 success = np.asarray(list(dict(sorted(test_class.success.items())).values()), dtype=bool)
-                path_time = np.asarray(list(dict(sorted(test_class.path_times.items())).values()))
-                max_time = np.asarray(list(dict(sorted(test_class.max_times.items())).values()))
+                path_time = as_float_array(list(dict(sorted(test_class.path_times.items())).values()))
+                max_time = as_float_array(list(dict(sorted(test_class.max_times.items())).values()))
                 messages = list(dict(sorted(test_class.messages.items())).values())
                 # save to csv
                 if filename:
@@ -719,8 +722,13 @@ class TestPipeline():
             # end condition on success           
 
             output += "Exceptions:\n"
-            for exception_message in test_class.exceptions:
-                output += exception_message + "\n"
+            for exception_seed, exception_messages in sorted(test_class.exceptions.items()):
+                output += "Seed " + str(exception_seed) + ":\n"
+                if isinstance(exception_messages, (list, tuple)):
+                    for exception_message in exception_messages:
+                        output += str(exception_message) + "\n"
+                else:
+                    output += str(exception_messages) + "\n"
 
             output += "\n\n"
         # end loop over classes 
@@ -798,7 +806,7 @@ if __name__ == "__main__":
     planning_time = 300.0
     for num_agents in [25, 30]:
         for gr in [1.0]:
-            savepath = "test_results/final_test_results/RANDOM_ALL_UCYCLE_a" + str(num_agents) + "_gr" + str(gr)
+            savepath = "paper_results/final_test_results/RANDOM_ALL_UCYCLE_a" + str(num_agents) + "_gr" + str(gr)
             os.makedirs(savepath, exist_ok=True) 
             # collect test classes
             test_classes =  [KcbsEbTestClass(max_planning_time=planning_time), 

@@ -116,13 +116,12 @@ def unicycle_sort_edges_numba(closest_tree_point, random_point, final_states, di
     sorted_indices = np.argsort(distance_array)
     return sorted_indices
 
-#Need to modify this function later for two things.
-#1) You don't really need to add distance as 1e10 for already explored edges.
-#2) Need to stop creating and returning a new array when you call argsort. 
 @njit
 def unicycle_sort_kd_tree_edges_numba(closest_tree_point, random_point, 
-                                start_states, final_states, curr_edge_indices, 
+                                start_states, final_states, timesteps,
+                                curr_edge_indices,
                                 curr_edge_mask, distance_array):
+    """Original combined Numba scoring-and-full-sorting implementation."""
     n = curr_edge_indices.shape[0]
     num_valid_edges = 0
     for i in range(n):
@@ -140,9 +139,36 @@ def unicycle_sort_kd_tree_edges_numba(closest_tree_point, random_point,
     sorted_indices = np.argsort(distance_array[:n])
     return sorted_indices[:num_valid_edges], num_valid_edges
 
+
+@njit
+def unicycle_score_kd_tree_edges_numba(closest_tree_point, random_point,
+                                start_states, final_states, timesteps,
+                                curr_edge_indices,
+                                curr_edge_mask, distance_array):
+    """Score unicycle candidates in Numba without ranking the scores."""
+    n = curr_edge_indices.shape[0]
+    num_valid_edges = 0
+    for i in range(n):
+        edge_idx = curr_edge_indices[i]
+        if curr_edge_mask[i] == True:
+            distance_array[i] = 1e10
+        else:
+            potential_new_point = (
+                unicycle_point_translate_function_kd_tree_numba(
+                    closest_tree_point, start_states[edge_idx],
+                    final_states[edge_idx])
+            )
+            distance_array[i] = euclidean_distance_numba(
+                potential_new_point, random_point)
+            num_valid_edges += 1
+
+    return num_valid_edges
+
+
 @njit
 def unicycle_no_sorting_kd_tree_edges_numba(closest_tree_point, random_point,
-                                start_states, final_states, curr_edge_indices,
+                                start_states, final_states, timesteps,
+                                curr_edge_indices,
                                 curr_edge_mask, distance_array):
     n = curr_edge_indices.shape[0]
     num_valid_edges = 0
@@ -304,21 +330,60 @@ class UniCycle:
 
     @staticmethod
     def sort_kd_tree_edges(closest_tree_point, random_point, start_states,
-            final_states, curr_edge_indices, curr_edge_mask, distance_array):
+            final_states, timesteps, curr_edge_indices, curr_edge_mask,
+            distance_array):
         """
-        Sorts edges based on their distance from a base point.
+        Score candidates in Numba, then fully rank them with NumPy's argsort.
         """
-        return unicycle_sort_kd_tree_edges_numba(closest_tree_point, random_point, 
-        start_states, final_states, curr_edge_indices, curr_edge_mask, distance_array)
+        num_valid_edges = unicycle_score_kd_tree_edges_numba(
+            closest_tree_point, random_point, start_states, final_states,
+            timesteps, curr_edge_indices, curr_edge_mask, distance_array)
+        sorted_indices = np.argsort(distance_array[:curr_edge_indices.shape[0]])
+        return sorted_indices[:num_valid_edges], num_valid_edges
+
+    @staticmethod
+    def sort_kd_tree_edges_combined_numba(closest_tree_point, random_point,
+            start_states, final_states, timesteps, curr_edge_indices,
+            curr_edge_mask, distance_array):
+        """Retained original combined Numba scoring-and-sorting path."""
+        return unicycle_sort_kd_tree_edges_numba(
+            closest_tree_point, random_point, start_states, final_states,
+            timesteps, curr_edge_indices, curr_edge_mask, distance_array)
+
+    @staticmethod
+    def select_kd_tree_edges_numpy_argpartition_geometric(
+            closest_tree_point, random_point, start_states, final_states,
+            timesteps, curr_edge_indices, curr_edge_mask, distance_array,
+            candidate_ranks):
+        """
+        Score in Numba and partition at the caller-provided geometric ranks.
+
+        The returned array is partitioned, not fully sorted. candidate_ranks
+        must match the exact valid-edge count for this call.
+
+        This is retained as a benchmark/reference implementation. KCBS SWAP
+        comparisons found that argpartition + geometric and full argsort +
+        geometric selected the same candidates and produced identical planner
+        results, while full sort was computationally preferable overall.
+        KiTE-RRT therefore uses its fully sorted order for geometric selection.
+        """
+        num_valid_edges = unicycle_score_kd_tree_edges_numba(
+            closest_tree_point, random_point, start_states, final_states,
+            timesteps, curr_edge_indices, curr_edge_mask, distance_array)
+        partitioned_indices = np.argpartition(
+            distance_array[:curr_edge_indices.shape[0]], candidate_ranks)
+        return partitioned_indices, num_valid_edges
 
     @staticmethod
     def no_sorting_kd_tree_edges(closest_tree_point, random_point, start_states,
-            final_states, curr_edge_indices, curr_edge_mask, distance_array):
+            final_states, timesteps, curr_edge_indices, curr_edge_mask,
+            distance_array):
         """
         Returns unexplored edge candidate indices without distance sorting.
         """
         return unicycle_no_sorting_kd_tree_edges_numba(closest_tree_point,
-            random_point, start_states, final_states, curr_edge_indices,
+            random_point, start_states, final_states, timesteps,
+            curr_edge_indices,
             curr_edge_mask, distance_array)
 
     def get_eb_kd_tree_query(self, state):

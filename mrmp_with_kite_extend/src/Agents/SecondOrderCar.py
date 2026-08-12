@@ -94,13 +94,18 @@ def SOC_point_translate_function_kd_tree_numba(base_point,
             edge_end_point[3],
             edge_end_point[4])
 
-#Need to modify this function later for two things.
-#1) You don't really need to add distance as 1e10 for already explored edges.
-#2) Need to stop creating and returning a new array when you call argsort. 
 @njit
 def SOC_sort_kd_tree_edges_numba(closest_tree_point, random_point, 
-                                start_states, final_states, curr_edge_indices, 
+                                start_states, final_states, timesteps,
+                                curr_edge_indices,
                                 curr_edge_mask, distance_array):
+    """
+    Original implementation that scores and fully sorts inside Numba.
+
+    Retained for comparisons. Moving only the full argsort outside Numba
+    preserved scores, candidate order, and planner trees exactly, while the
+    split implementation was about 9-12% faster in the tested SOC planners.
+    """
 
     n = curr_edge_indices.shape[0]
     num_valid_edges = 0
@@ -121,9 +126,41 @@ def SOC_sort_kd_tree_edges_numba(closest_tree_point, random_point,
     sorted_indices = np.argsort(distance_array[:n])
     return sorted_indices[:num_valid_edges], num_valid_edges
 
+
+@njit
+def SOC_score_kd_tree_edges_numba(closest_tree_point, random_point,
+                                start_states, final_states, timesteps,
+                                curr_edge_indices,
+                                curr_edge_mask, distance_array):
+    """
+    Score edge candidates using the same translation and distance calculation
+    as SOC_sort_kd_tree_edges_numba, without ranking the resulting scores.
+
+    Keeping scoring in this Numba kernel allows the caller to use NumPy's
+    optimized ranking functions outside Numba.
+    """
+    n = curr_edge_indices.shape[0]
+    num_valid_edges = 0
+
+    for i in range(n):
+        if curr_edge_mask[i] == True:
+            distance_array[i] = 1e10
+        else:
+            edge_idx = curr_edge_indices[i]
+            potential_new_point = SOC_point_translate_function_kd_tree_numba(
+                closest_tree_point, start_states[edge_idx],
+                final_states[edge_idx])
+            distance_array[i] = euclidean_distance_numba(
+                potential_new_point, random_point)
+            num_valid_edges += 1
+
+    return num_valid_edges
+
+
 @njit
 def SOC_get_unmasked_kd_tree_edges_no_sorting_numba(closest_tree_point, random_point, 
-                                start_states, final_states, curr_edge_indices, 
+                                start_states, final_states, timesteps,
+                                curr_edge_indices,
                                 curr_edge_mask, distance_array):
 
     n = curr_edge_indices.shape[0]
@@ -338,23 +375,72 @@ class SecondOrderCar:
 
     @staticmethod
     def sort_kd_tree_edges(closest_tree_point, random_point, start_states,
-            final_states, curr_edge_indices, curr_edge_mask, distance_array):
+            final_states, timesteps, curr_edge_indices, curr_edge_mask,
+            distance_array):
         """
-        Sorts edges based on their distance from a base point.
+        Score candidates in Numba, then rank them with NumPy's argsort.
+
+        This is the default SOC ranking path. Compared with doing both steps
+        inside SOC_sort_kd_tree_edges_numba, it returned identical candidate
+        orders and trees and was about 9-12% faster in the tested empty and
+        central-obstacle SOC planner runs.
         """
-        return SOC_sort_kd_tree_edges_numba(closest_tree_point,
-            random_point, start_states, final_states, curr_edge_indices,
-            curr_edge_mask, distance_array)
+        num_valid_edges = SOC_score_kd_tree_edges_numba(
+            closest_tree_point, random_point, start_states, final_states,
+            timesteps, curr_edge_indices, curr_edge_mask, distance_array)
+        sorted_indices = np.argsort(distance_array[:curr_edge_indices.shape[0]])
+        return sorted_indices[:num_valid_edges], num_valid_edges
+
+    @staticmethod
+    def sort_kd_tree_edges_combined_numba(closest_tree_point, random_point,
+            start_states, final_states, timesteps, curr_edge_indices,
+            curr_edge_mask, distance_array):
+        """
+        Retained original path: both candidate scoring and full argsort execute
+        inside Numba. It is behaviorally equivalent to sort_kd_tree_edges, but
+        was slower in the tested SOC workloads.
+        """
+        return SOC_sort_kd_tree_edges_numba(
+            closest_tree_point, random_point, start_states, final_states,
+            timesteps, curr_edge_indices, curr_edge_mask, distance_array)
+
+    @staticmethod
+    def select_kd_tree_edges_numpy_argpartition_geometric(
+            closest_tree_point, random_point, start_states, final_states,
+            timesteps, curr_edge_indices, curr_edge_mask, distance_array,
+            candidate_ranks):
+        """
+        Score candidates in Numba and select geometric ranks with argpartition.
+
+        The returned indices address curr_edge_indices and curr_edge_mask; they
+        are already the selected candidate positions, not a fully sorted order.
+        candidate_ranks must be generated for this call's exact number of
+        valid edges.
+
+        This is retained as a benchmark/reference implementation. We compared
+        argpartition + geometric against full argsort + geometric in
+        single-agent and KCBS SWAP experiments. They selected the same
+        candidates and produced identical geometric-mode planner results, while
+        full sort was computationally preferable overall. KiTE-RRT therefore
+        uses its fully sorted order for geometric selection.
+        """
+        num_valid_edges = SOC_score_kd_tree_edges_numba(
+            closest_tree_point, random_point, start_states, final_states,
+            timesteps, curr_edge_indices, curr_edge_mask, distance_array)
+        partitioned_indices = np.argpartition(
+            distance_array[:curr_edge_indices.shape[0]], candidate_ranks)
+        return partitioned_indices, num_valid_edges
     
     @staticmethod
     def no_sorting_kd_tree_edges(closest_tree_point, random_point, start_states,
-            final_states, curr_edge_indices, curr_edge_mask, distance_array):
+            final_states, timesteps, curr_edge_indices, curr_edge_mask,
+            distance_array):
         """
         Returns unexplored edge candidate indices without distance sorting.
         """
         return SOC_get_unmasked_kd_tree_edges_no_sorting_numba(
             closest_tree_point,random_point, start_states, final_states,
-            curr_edge_indices, curr_edge_mask, distance_array)
+            timesteps, curr_edge_indices, curr_edge_mask, distance_array)
 
     def get_eb_kd_tree_query(self, state):
         """

@@ -1,0 +1,119 @@
+import sys
+sys.path.append('./src')
+import numpy as np
+
+from Environments import SquareEnvironment, CircularObstacle2D
+from mapf_env_square_agent_second_order_car import get_second_order_car_agent
+from kinodynamic_TI_eb_sst import KiteSST
+from edge_bundle import EdgeBundle
+from kd_tree_second_order_car import VPhiTree
+from sst_printer import SSTPrinter
+
+
+agent = get_second_order_car_agent(agent_id=1)
+
+# obstacles = [
+#             CircularObstacle2D(10, 10, 2),
+#             CircularObstacle2D(16, 25, 3),
+#             CircularObstacle2D(20, 5, 2),
+#             CircularObstacle2D(35, 15, 4),
+#             CircularObstacle2D(30, 34, 4),
+#             CircularObstacle2D(25, 15, 4),
+#             CircularObstacle2D(7, 19, 5),
+#             CircularObstacle2D(16, 16, 2),
+#             CircularObstacle2D(33, 4, 2),
+#             CircularObstacle2D(8, 34, 3),
+#             CircularObstacle2D(20, 32, 2),
+#             CircularObstacle2D(31, 24, 3),
+#             ]
+# obstacles = []
+# env = SquareEnvironment(40, 40, obstacles, obs_buffers=False)
+# start = np.array([7.0, 5.0, 0.0, 0.0, 0.0])
+# goal = np.array([24.0, 37.0])
+# goal_radius = 0.5
+
+
+obstacles = [
+    CircularObstacle2D(8, 8, 2),
+]
+env = SquareEnvironment(15, 15, obstacles, obs_buffers=False)
+start = np.array([2.0, 2.0, 0.0, 0.0, 0.0])
+goal = np.array([13.0, 14.0])
+goal_radius = 0.5
+
+
+edge_bundle_file_location = 'edge_bundles_unclamped/eb_second_order_car_kinodynamic_TI_edges_100000.npz'
+data = np.load(edge_bundle_file_location)
+kino_TI_eb_SOC = EdgeBundle(data, fix_num_edges=50000, use_all_edges=False)
+
+edge_ids = np.arange(kino_TI_eb_SOC.num_edges, dtype=np.int64)
+speeds = kino_TI_eb_SOC.start_states[:, 3]
+phis = kino_TI_eb_SOC.start_states[:, 4]
+kd_tree_TI_eb_SOC = VPhiTree(
+            speeds, phis, ids=edge_ids,
+            v_scale=agent.max_speed,
+            phi_scale=agent.max_phi
+            )
+
+
+s = np.random.randint(0, 1000)
+# s = 645
+print("Seed:", s)
+
+kino_eb_sst = KiteSST(
+            start=start, goal=goal,
+            goal_radius=goal_radius,
+            env=env, agent=agent,
+            edge_bundle=kino_TI_eb_SOC,
+            sampling_time_step=2.0,
+            use_fixed_sampling_time=False,
+            minimum_time_step=0.1,
+            max_iter=100000,
+            planning_time=300.0,
+            isvalid_function=agent.is_new_node_valid,
+            cost_function=agent.get_cost,
+            random_point_function=agent.get_random_point,
+            reached_goal_function=agent.agent_reached_goal,
+            translate_function=agent.kd_tree_point_translate_function,
+            sort_edges_function=agent.sort_kd_tree_edges,
+            max_num_edges_per_node=1000,
+            num_skip_edges=10,
+            num_random_edges=10,
+            eb_kd_tree=kd_tree_TI_eb_SOC,
+            get_eb_kd_tree_query=agent.get_eb_kd_tree_query,
+            kd_tree_delta_radius=0.1,
+            udf_seed=s,
+            print_logs=True,
+            debug_flag=False,
+            best_near_radius=1.0,
+            prune_radius=0.5,
+            )
+
+kino_eb_sst.plan_path()
+print("First solution planning time:", kino_eb_sst.first_solution_planning_time)
+print("First solution path cost:", kino_eb_sst.first_solution_path_cost)
+print("Final path cost:", kino_eb_sst.path_cost)
+print("Best path time:", kino_eb_sst.path_time)
+
+node_ids, states, actions, timesteps = kino_eb_sst.get_path()
+
+printer = SSTPrinter(env, kino_eb_sst)
+printer.print_sst("media/kino_TI_eb_sst_SOC.png",
+                  show_tree=True, show_path=True,
+                  show_active=True, show_inactive=False,
+                  show_witness=False, show_prune_circles=False)
+
+
+"""
+# Check if the returned states and actions reconstruct the path.
+
+node_ids, states, actions, timesteps = kino_eb_sst.get_path_to_node_id(kino_eb_sst.goal_node_id)
+for i in range(len(node_ids)-1):
+    parent_state = states[i]
+    action = actions[i]
+    duration = timesteps[i]
+    num_steps = round(duration/kino_eb_sst.minimum_time_step)
+    next_state, _ = agent.get_next_state(parent_state, action, duration, num_steps=num_steps)
+    print("Next State from propagation: ", next_state)
+    print("Stored State in SST: ", states[i+1])
+"""

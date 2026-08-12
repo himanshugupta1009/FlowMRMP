@@ -1,5 +1,17 @@
 ***********************************************************************
-Date: 18th May, 2025
+Date: 8th June, 2026
+Iside dbCBS code, the agent radius should be read from a parser file.
+It reads it correctly for the Quad agent.
+However, it doesn't do that for the Unicycle agent. It is hard coded.
+We need to change that someday!!
+
+***********************************************************************
+Date: 4th June, 2026
+Primitves used by dbCBS for Quad
+quadcopter6d_dbcbs_15_1100_primitives.npz
+
+***********************************************************************
+Date: 18th May, 2026
 Test files for experiments are:
 #2D
 pipeline_code/test_pipeline_swap.py

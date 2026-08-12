@@ -31,7 +31,7 @@ class TestPipelineCluttered(TestPipeline):
             master_seed (int, optional): Test pipeline rng seed. Defaults to 42.
             processes (int, optional): Number of parallel processes to use. Defaults to 1.
         """
-        if num_agents not in [x for x in range(2, 21)]: raise Exception("Use between 2 and 10 agents")
+        if num_agents not in range(2, 31): raise Exception("Use between 2 and 30 agents")
         super().__init__(test_classes, agent_builders, test_rounds, num_agents, env_width=env_width, env_bredth=env_bredth, 
                          master_seed=master_seed, savepath=savepath, goal_radius=goal_radius, processes=processes)
     
@@ -70,7 +70,17 @@ class TestPipelineCluttered(TestPipeline):
             (4.0, 3.0, 0.0),
             (14.0, 1.0, 0.0),
             (6.0, 8.0, 0.0),
-            (7.0, 1.0, 0.0)
+            (7.0, 1.0, 0.0),
+            (2.5, 2.5, 0.0),
+            (11.0, 1.0, 0.0),
+            (1.0, 14.0, 0.0),
+            (12.0, 9.5, 0.0),
+            (5.5, 10.0, 0.0),
+            (9.5, 13.5, 0.0),
+            (14.0, 6.0, 0.0),
+            (5.0, 6.5, 0.0),
+            (11.5, 6.5, 0.0),
+            (2.8, 7.2, 0.0)
         ]
 
         possible_goals = [
@@ -93,8 +103,24 @@ class TestPipelineCluttered(TestPipeline):
             (6.0, 11.0),
             (9.0, 8.0),
             (10.0, 12.0), 
-            (3.0, 9.0)
+            (3.0, 9.0),
+            (13.8, 11.0),
+            (2.5, 6.0),
+            (11.5, 13.5),
+            (5.5, 4.0),
+            (14.0, 5.0),
+            (1.2, 13.8),
+            (6.2, 6.2),
+            (12.2, 7.0),
+            (3.5, 10.8),
+            (8.8, 4.8)
         ]
+
+        if len(agents) > len(possible_starts) or len(agents) > len(possible_goals):
+            raise ValueError(
+                "Small cluttered pipeline has hardcoded starts/goals for "
+                f"{min(len(possible_starts), len(possible_goals))} agents, "
+                f"but got {len(agents)} agents")
 
         starts = []
         goals = []
@@ -174,15 +200,15 @@ from agent_builders import *
 if __name__ == "__main__":
     agent_builders = [
                         SecondOrderCarBuilder(),
-                        UnicycleBuilder()
+                        # UnicycleBuilder()
                       ]
     planning_time = 300.0    
-    save_root = "test_results/new_final_results/small_cluttered_env"
+    save_root = "paper_results/results_9June2026/small_cluttered_env"
+    # save_root = "paper_results/free_time/small_cluttered_env"
     test_rounds = 100
     gr = 0.5
     kd_tree_delta_radius = .10
     seed_multiplier = 200
-    num_processes = 25
     survival_min_successes = 1
 
     surviving_classes = {}
@@ -209,8 +235,18 @@ if __name__ == "__main__":
                 failed.append(test_class.name)
         return failed
 
-    for agent_count in [3, 4, 5, 6, 7, 8, 9, 10, 12, 15, 18, 20]:
+    def get_num_processes(agent_count):
+        # if agent_count <= 10:
+        #     return 100
+        # if agent_count < 20:
+        #     return 50
+        # return 30
+        return 20
+
+    for agent_count in [2, 3, 4, 5, 8, 10, 12, 15, 18, 20, 23, 25, 27, 30]:
+    # for agent_count in [2, 23, 25, 27, 30]:
         master_seed = agent_count * seed_multiplier
+        num_processes = get_num_processes(agent_count)
         for agent_builder in agent_builders:
 
             savepath = os.path.join(
@@ -230,7 +266,13 @@ if __name__ == "__main__":
                 test_classes = [
                     KcbsTestClass(max_planning_time=planning_time, obs_buffers=False), 
                     KcbsKinoTiEbTestClass(max_planning_time=planning_time, obs_buffers=False),
-                    KcbsDbrrtTestClass(max_planning_time=planning_time, obs_buffers=False),
+                    KcbsDbrrtTestClass(max_planning_time=planning_time, obs_buffers=False,
+                        optimizer_backend="cpp_dynoplan",
+                        cpp_optimizer_options=CppDynoplanUnicycleOptimizerOptions(
+                            solver_id_static=1,
+                            solver_id_constrained=0,
+                        ),
+                    ),
                     PrrtTestClass(max_planning_time=planning_time, obs_buffers=False),
                     PrioritizedKinoTIRRTTestClass(max_planning_time=planning_time, obs_buffers=False),
                     CRRTTestClass(max_planning_time=planning_time,
@@ -271,18 +313,28 @@ if __name__ == "__main__":
                                     num_agents=agent_count, 
                                     master_seed=master_seed,
                                     savepath=savepath, goal_radius=gr, processes=num_processes)
+            extra_experiment_config = {
+                "agent_type": agent_builder.name,
+                "planning_time": planning_time,
+                "kd_tree_delta_radius": kd_tree_delta_radius,
+                "seed_multiplier": seed_multiplier,
+                "survival_min_successes": survival_min_successes,
+                "num_processes": num_processes,
+            }
+            if isinstance(agent_builder, UnicycleBuilder):
+                extra_experiment_config.update({
+                    "dbrrt_optimizer_backend": "cpp_dynoplan",
+                    "dbrrt_optimizer_static_time_mode": "free_time",
+                    "dbrrt_optimizer_constrained_time_mode": "fixed_time",
+                    "dbrrt_solver_id_static": 1,
+                    "dbrrt_solver_id_constrained": 0,
+                })
             write_pipeline_manifest(
                 pipeline=tp,
                 savepath=savepath,
                 pipeline_file=__file__,
                 environment_name="small_cluttered_env",
-                extra_experiment_config={
-                    "agent_type": agent_builder.name,
-                    "planning_time": planning_time,
-                    "kd_tree_delta_radius": kd_tree_delta_radius,
-                    "seed_multiplier": seed_multiplier,
-                    "survival_min_successes": survival_min_successes,
-                },
+                extra_experiment_config=extra_experiment_config,
             )
             with open(savepath+'/log.txt', 'w') as f, redirect_stdout(f):
                 tp.run()

@@ -106,12 +106,12 @@ if __name__ == "__main__":
                         UnicycleBuilder()
                       ]
     planning_time = 300.0
-    save_root = "test_results/new_final_results/narrow_corridor_env"
+    save_root = "paper_results/results_9June2026/narrow_corridor_env"
+    # save_root = "paper_results/free_time/narrow_corridor_env"
     test_rounds = 100
     gr = 0.25
     kd_tree_delta_radius = .10
     seed_multiplier = 200
-    num_processes = 25
     survival_min_successes = 1
 
     surviving_classes = {}
@@ -138,8 +138,12 @@ if __name__ == "__main__":
                 failed.append(test_class.name)
         return failed
 
+    def get_num_processes(agent_count):
+        return 10
+
     for agent_count in [3]:
         master_seed = agent_count * seed_multiplier
+        num_processes = get_num_processes(agent_count)
 
         for agent_builder in agent_builders:
             savepath = os.path.join(
@@ -156,10 +160,16 @@ if __name__ == "__main__":
             test_classes = []
             survival_key = get_survival_key(agent_builder)
             if isinstance(agent_builder, UnicycleBuilder):
-                test_classes =  [
+                test_classes = [
                     KcbsTestClass(max_planning_time=planning_time, obs_buffers=False), 
                     KcbsKinoTiEbTestClass(max_planning_time=planning_time, obs_buffers=False),
-                    KcbsDbrrtTestClass(max_planning_time=planning_time, obs_buffers=False),
+                    KcbsDbrrtTestClass(max_planning_time=planning_time, obs_buffers=False,
+                        optimizer_backend="cpp_dynoplan",
+                        cpp_optimizer_options=CppDynoplanUnicycleOptimizerOptions(
+                            solver_id_static=1,
+                            solver_id_constrained=0,
+                        ),
+                    ),
                     PrrtTestClass(max_planning_time=planning_time, obs_buffers=False),
                     PrioritizedKinoTIRRTTestClass(max_planning_time=planning_time, obs_buffers=False),
                     CRRTTestClass(max_planning_time=planning_time,
@@ -167,8 +177,10 @@ if __name__ == "__main__":
                                   branch_goal_parking=True),
                     KinoTiCRRTEBTestClass(max_planning_time=planning_time,
                                           obs_buffers=False,
-                                          branch_goal_parking=True), 
-                    # DbCBSEnvTranslator(save_location=savepath)
+                                          branch_goal_parking=True),
+                    # KcbsEbTestClass(max_planning_time=planning_time, obs_buffers=False),
+                    # PrrtEbTestClass(max_planning_time=planning_time, obs_buffers=False),
+                    # CRRTEBTestClass(max_planning_time=planning_time, obs_buffers=False)
                     ]
             else:
                 test_classes = [
@@ -197,18 +209,28 @@ if __name__ == "__main__":
                                     master_seed=master_seed,
                                     savepath=savepath,
                                     goal_radius=gr, processes=num_processes)
+            extra_experiment_config = {
+                "agent_type": agent_builder.name,
+                "planning_time": planning_time,
+                "kd_tree_delta_radius": kd_tree_delta_radius,
+                "seed_multiplier": seed_multiplier,
+                "survival_min_successes": survival_min_successes,
+                "num_processes": num_processes,
+            }
+            if isinstance(agent_builder, UnicycleBuilder):
+                extra_experiment_config.update({
+                    "dbrrt_optimizer_backend": "cpp_dynoplan",
+                    "dbrrt_optimizer_static_time_mode": "free_time",
+                    "dbrrt_optimizer_constrained_time_mode": "fixed_time",
+                    "dbrrt_solver_id_static": 1,
+                    "dbrrt_solver_id_constrained": 0,
+                })
             write_pipeline_manifest(
                 pipeline=tp,
                 savepath=savepath,
                 pipeline_file=__file__,
                 environment_name="narrow_corridor_env",
-                extra_experiment_config={
-                    "agent_type": agent_builder.name,
-                    "planning_time": planning_time,
-                    "kd_tree_delta_radius": kd_tree_delta_radius,
-                    "seed_multiplier": seed_multiplier,
-                    "survival_min_successes": survival_min_successes,
-                },
+                extra_experiment_config=extra_experiment_config,
             )
             with open(savepath+'/log.txt', 'w') as f, redirect_stdout(f):
                 tp.run()

@@ -14,6 +14,10 @@ from db.constrained_db_optimize_quadcopter6d import (
     optimize_dbrrt_quadcopter6d_path as optimize_constrained_dbrrt_quadcopter6d_path,
     Quadcopter6DTrajOptOptions as ConstrainedQuadcopter6DTrajOptOptions,
 )
+from db.cpp_dynoplan_optimize_quadcopter6d import (
+    optimize_dbrrt_quadcopter6d_path_with_cpp_dynoplan,
+    CppDynoplanQuadcopter6DOptimizerOptions,
+)
 
 
 def get_quadcopter_agent(agent_id):
@@ -21,7 +25,7 @@ def get_quadcopter_agent(agent_id):
         agent_id=agent_id,
         max_speed=0.5,
         max_acceleration=2.0,
-        radius=0.25,
+        radius=0.2,
         rng_seed=agent_id + 77,
     )
 
@@ -45,7 +49,7 @@ def get_rrt_planner(start, goal, goal_radius, agent,
         random_point_function=agent.get_random_point,
         reached_goal_function=agent.agent_reached_goal,
         udf_seed=np.random.randint(0, 1000),
-        prune_tree=True,
+        reuse_tree=True,
     )
 
 
@@ -158,10 +162,14 @@ def get_kino_TI_eb_rrt_planner_grid_quadcopter6d(start, goal, goal_radius,
 
 
 def get_constrained_db_rrt_planner_quadcopter6d(
-    start, goal, goal_radius, agent, env, use_optimizer=True, 
+    start, goal, goal_radius, agent, env, use_optimizer=True,
     num_edges=1000,
     motion_primitive_dt=0.1,
-    primitive_file_location="motion_primitives/quadcopter6d_long_50_1000_primitives.npz"
+    # primitive_file_location="motion_primitives/quadcopter6d_dbcbs_15_1100_primitives.npz",
+    primitive_file_location="motion_primitives/quadcopter6d_long_50_1000_primitives.npz",
+    optimizer_backend="cpp_dynoplan",
+    cpp_optimizer_options=None,
+    udf_seed=0,
     ):
 
     motion_primitives, kd_tree = load_quadcopter6d_motion_primitives(
@@ -180,8 +188,8 @@ def get_constrained_db_rrt_planner_quadcopter6d(
         alpha=0.5,
         delta=0.3,
         minimum_time_step=0.1,
-        max_iter=10000,
-        planning_time=600.0,
+        max_iter=np.inf,
+        planning_time=300.0,
         isvalid_function=agent.is_new_node_valid,
         cost_function=agent.get_cost,
         random_point_function=agent.get_random_point,
@@ -198,15 +206,26 @@ def get_constrained_db_rrt_planner_quadcopter6d(
         goal_expand_mode="focused",
         random_expand_mode="randomized",
         dynamic_agent_clearance=0.0,
-        udf_seed=0, # Will be overwritten by KCBS init
+        udf_seed=udf_seed, # Will be overwritten by KCBS init
         debug_flag=False,
         print_logs=False,
     )
-    if use_optimizer:
+    if use_optimizer and optimizer_backend == "python":
         planner.set_optimizer(
             lambda curr_planner: optimize_constrained_dbrrt_quadcopter6d_path(
                 curr_planner,
                 options=ConstrainedQuadcopter6DTrajOptOptions(),
             )
         )
+    elif use_optimizer and optimizer_backend == "cpp_dynoplan":
+        if cpp_optimizer_options is None:
+            cpp_optimizer_options = CppDynoplanQuadcopter6DOptimizerOptions()
+        planner.set_optimizer(
+            lambda curr_planner: optimize_dbrrt_quadcopter6d_path_with_cpp_dynoplan(
+                curr_planner,
+                options=cpp_optimizer_options,
+            )
+        )
+    elif use_optimizer:
+        raise ValueError(f"Unknown quadcopter6d db-RRT optimizer_backend: {optimizer_backend}")
     return planner

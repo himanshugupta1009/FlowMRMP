@@ -458,6 +458,64 @@ class FrankaEdgeBundleStore:
                     },
                 }
                 self.preserve_bundle_order = True
+            elif format_name == "franka_target_conditioned_valid_pool_bundle":
+                metadata_value = dataset["metadata_json"][()]
+                if isinstance(metadata_value, bytes):
+                    metadata_value = metadata_value.decode("utf-8")
+                target_metadata = json.loads(str(metadata_value))
+                source_basename = str(dataset.attrs["source_dataset_basename"])
+                local_source = self.path.parent / source_basename
+                original_source = Path(
+                    str(dataset.attrs["source_dataset_original_path"])
+                )
+                if local_source.is_file():
+                    source_path = local_source.resolve()
+                elif original_source.is_file():
+                    source_path = original_source.resolve()
+                else:
+                    raise FileNotFoundError(
+                        "Target-conditioned v2 dataset requires its source HDF5. "
+                        f"Expected {local_source} or {original_source}"
+                    )
+                if not bool(dataset.attrs.get("complete", False)):
+                    raise ValueError(
+                        f"Refusing to train from incomplete v2 dataset: {self.path}"
+                    )
+                target_view = {
+                    "metadata": target_metadata,
+                    "direct_bundle_storage": True,
+                    "conds": {
+                        split: dataset[f"{split}/conds"][:].astype(
+                            np.float32, copy=False
+                        )
+                        for split in ("train", "val")
+                    },
+                    "bundle_ids": {
+                        split: dataset[f"{split}/selected_edge_ids"][:].astype(
+                            np.int64, copy=False
+                        )
+                        for split in ("train", "val")
+                    },
+                    "num_steps": {
+                        split: dataset[f"{split}/selected_num_steps"][:].astype(
+                            np.int32, copy=False
+                        )
+                        for split in ("train", "val")
+                    },
+                    "delta_q": {
+                        split: dataset[f"{split}/selected_delta_q"][:].astype(
+                            np.float32, copy=False
+                        )
+                        for split in ("train", "val")
+                    },
+                    "delta_dq": {
+                        split: dataset[f"{split}/selected_delta_dq"][:].astype(
+                            np.float32, copy=False
+                        )
+                        for split in ("train", "val")
+                    },
+                }
+                self.preserve_bundle_order = True
             elif format_name == "franka_variable_length_edge_bundle":
                 source_path = self.path
                 self.preserve_bundle_order = False
@@ -487,19 +545,22 @@ class FrankaEdgeBundleStore:
                 }
             else:
                 self.conds = target_view["conds"]
-                self.bundle_ids = {}
-                for split in ("train", "val"):
-                    base_indices = target_view["base_indices"][split]
-                    unique_indices, inverse = np.unique(
-                        base_indices, return_inverse=True
-                    )
-                    base_ids = source[f"source_edge_ids_{split}"][unique_indices][
-                        inverse
-                    ]
-                    order = target_view["edge_order"][split]
-                    self.bundle_ids[split] = np.take_along_axis(
-                        base_ids, order, axis=1
-                    )
+                if target_view.get("direct_bundle_storage", False):
+                    self.bundle_ids = target_view["bundle_ids"]
+                else:
+                    self.bundle_ids = {}
+                    for split in ("train", "val"):
+                        base_indices = target_view["base_indices"][split]
+                        unique_indices, inverse = np.unique(
+                            base_indices, return_inverse=True
+                        )
+                        base_ids = source[f"source_edge_ids_{split}"][unique_indices][
+                            inverse
+                        ]
+                        order = target_view["edge_order"][split]
+                        self.bundle_ids[split] = np.take_along_axis(
+                            base_ids, order, axis=1
+                        )
             # Outcomes were computed during dataset construction and are used
             # both for training and fast endpoint ranking during planning.
             outcomes = source["bundle_outcomes"]
@@ -517,26 +578,31 @@ class FrankaEdgeBundleStore:
                     for split in ("train", "val")
                 }
             else:
-                self.bundle_num_steps = {}
-                self.bundle_delta_q = {}
-                self.bundle_delta_dq = {}
-                for split in ("train", "val"):
-                    base_indices = target_view["base_indices"][split]
-                    unique_indices, inverse = np.unique(
-                        base_indices, return_inverse=True
-                    )
-                    order = target_view["edge_order"][split]
-                    for destination, name in (
-                        (self.bundle_num_steps, "num_steps"),
-                        (self.bundle_delta_q, "delta_q"),
-                        (self.bundle_delta_dq, "delta_dq"),
-                    ):
-                        values = outcomes[f"{name}_{split}"][unique_indices][inverse]
-                        destination[split] = np.take_along_axis(
-                            values,
-                            order if values.ndim == 2 else order[:, :, None],
-                            axis=1,
+                if target_view.get("direct_bundle_storage", False):
+                    self.bundle_num_steps = target_view["num_steps"]
+                    self.bundle_delta_q = target_view["delta_q"]
+                    self.bundle_delta_dq = target_view["delta_dq"]
+                else:
+                    self.bundle_num_steps = {}
+                    self.bundle_delta_q = {}
+                    self.bundle_delta_dq = {}
+                    for split in ("train", "val"):
+                        base_indices = target_view["base_indices"][split]
+                        unique_indices, inverse = np.unique(
+                            base_indices, return_inverse=True
                         )
+                        order = target_view["edge_order"][split]
+                        for destination, name in (
+                            (self.bundle_num_steps, "num_steps"),
+                            (self.bundle_delta_q, "delta_q"),
+                            (self.bundle_delta_dq, "delta_dq"),
+                        ):
+                            values = outcomes[f"{name}_{split}"][unique_indices][inverse]
+                            destination[split] = np.take_along_axis(
+                                values,
+                                order if values.ndim == 2 else order[:, :, None],
+                                axis=1,
+                            )
             # A raw edge is identified by source trajectory, start index, and
             # number of acceleration intervals to execute.
             raw = source["raw_edges"]
@@ -619,15 +685,31 @@ class FrankaEdgeBundleStore:
                     "target_conditioning": {
                         "format_name": target_metadata["format_name"],
                         "format_version": target_metadata["format_version"],
-                        "condition_layout": target_metadata["condition_layout"],
-                        "relative_target_normalization": target_metadata[
-                            "relative_target_normalization"
-                        ],
-                        "target_policy": target_metadata["target_policy"],
-                        "edge_order": target_metadata["edge_order"],
-                        "target_directed_count": target_metadata[
-                            "target_directed_count"
-                        ],
+                        "condition_layout": target_metadata.get(
+                            "condition_layout",
+                            {
+                                "current_normalized_state": [0, 14],
+                                "relative_target_normalized": [14, 28],
+                                "goal_mode_flag": 28,
+                            },
+                        ),
+                        "relative_target_normalization": target_metadata.get(
+                            "relative_target_normalization",
+                            {
+                                "delta_q": "2 * delta_q / (q_upper - q_lower)",
+                                "delta_dq": "delta_dq / dq_max_abs",
+                                "goal_mode_delta_dq": "zero",
+                            },
+                        ),
+                        "target_policy": target_metadata.get(
+                            "target_policy", target_metadata.get("target_sources")
+                        ),
+                        "edge_order": target_metadata.get(
+                            "edge_order", target_metadata.get("selection")
+                        ),
+                        "target_directed_count": target_metadata.get(
+                            "target_directed_count", 8
+                        ),
                         "source_dataset_sha256": target_metadata.get(
                             "source_dataset_sha256"
                         ),

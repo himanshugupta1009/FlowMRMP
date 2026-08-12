@@ -87,32 +87,34 @@ def _radius_query_once(th_sorted, th_ext, ids_sorted, ids_ext,
 
 @njit
 def _knn_query_once(th_sorted, ids_sorted, theta_q: float, k: int):
-    """k-NN on the circle (returns fixed-size arrays of length k)."""
+    """k-NN on the circle using a wrap-aware two-pointer merge."""
     n = th_sorted.size
     if n == 0:
         return np.empty(0, np.int64), np.empty(0, np.float64)
     k = min(max(1, k), n)
 
     θq = theta_q % (2*np.pi)
-    # insertion point == lower_bound
+    # Start immediately to either side of the insertion point. Both pointers
+    # wrap around the 0/2π seam. Since they consume one distinct element per
+    # iteration and k <= n, the result cannot contain duplicate entries.
     i = _lower_bound(th_sorted, θq)
-    L = i - 1
-    R = i
+    L = (i - 1) % n
+    R = i % n
 
     ids_out = np.empty(k, np.int64)
     dists_out = np.empty(k, np.float64)
     t = 0
-    while t < k and (L >= 0 or R < n):
-        dL = _wrap_abs_diff(th_sorted[L], θq) if L >= 0 else 1e300
-        dR = _wrap_abs_diff(th_sorted[R], θq) if R < n else 1e300
+    while t < k:
+        dL = _wrap_abs_diff(th_sorted[L], θq)
+        dR = _wrap_abs_diff(th_sorted[R], θq)
         if dL <= dR:
             ids_out[t] = ids_sorted[L]
             dists_out[t] = dL
-            L -= 1
+            L = (L - 1) % n
         else:
             ids_out[t] = ids_sorted[R]
             dists_out[t] = dR
-            R += 1
+            R = (R + 1) % n
         t += 1
     return ids_out, dists_out
 

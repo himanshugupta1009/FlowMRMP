@@ -35,18 +35,24 @@ from franka_paths import (
     FLOWMRMP_ROOT,
     path_label,
 )
+from franka_solution_quality import (
+    path_motion_time_from_states,
+    solution_quality_summary,
+)
 
 TUNING_PROBLEM_IDS = (4, 10, 17, 37, 41, 57, 64, 81)
 ENVIRONMENT_DESCRIPTION = (
-    "empty; joint/velocity limits and self-collision checked per waypoint; "
+    "empty; joint/velocity limits and MorphIt/cuRobo self-collision checked "
+    "in batched rollout edges; "
     "acceleration and intra-edge jerk limits checked per control sequence"
 )
 
-for module_path in (FLOW_EB_RRT_SRC, FLOWMRMP_SRC):
+MAIN_SCRIPTS = FLOWMRMP_ROOT / "scripts"
+for module_path in (MAIN_SCRIPTS, FLOW_EB_RRT_SRC, FLOWMRMP_SRC):
     if str(module_path) not in sys.path:
         sys.path.insert(0, str(module_path))
 
-from Agents.FrankaPanda import (  # noqa: E402
+from FrankaPanda import (  # noqa: E402
     EmptyFrankaEnvironment,
     FrankaPanda,
     FrankaSelfCollisionChecker,
@@ -93,6 +99,10 @@ def source_file_hashes() -> dict[str, str]:
         / "scripts"
         / "FrankaTesting"
         / "benchmark_franka_vanilla_rrt.py",
+        FLOWMRMP_ROOT
+        / "scripts"
+        / "FrankaTesting"
+        / "franka_solution_quality.py",
         FLOWMRMP_ROOT / "src" / "flow_eb_rrt.py",
         FLOWMRMP_ROOT / "scripts" / "train_franka_edge_flow_matching.py",
         FLOWMRMP_ROOT / "scripts" / "train_soc_edge_flow_matching.py",
@@ -102,11 +112,7 @@ def source_file_hashes() -> dict[str, str]:
         / "kinodynamic_TI_eb_rrt.py",
         FLOWMRMP_ROOT / "mrmp_with_kite_extend" / "src" / "rrt.py",
         FLOWMRMP_ROOT / "mrmp_with_kite_extend" / "src" / "utils.py",
-        FLOWMRMP_ROOT
-        / "mrmp_with_kite_extend"
-        / "src"
-        / "Agents"
-        / "FrankaPanda.py",
+        MAIN_SCRIPTS / "FrankaPanda.py",
     )
     return {
         path_label(path): file_sha256(path)
@@ -161,7 +167,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--goal-radius",
         type=float,
-        default=0.25,
+        default=0.40,
         help="Normalized 7D joint-position goal radius.",
     )
     parser.add_argument("--goal-sampling-probability", type=float, default=0.30)
@@ -333,6 +339,14 @@ def run_problem(
     path_node_id = int(planner.goal_node_id) if planner.path_found else best_node_id
     dense_path = dense_path_to_node(planner, path_node_id)
     final_distance = float(agent.get_goal_distance(dense_path[-1], goal))
+    path_motion_time = path_motion_time_from_states(dense_path, generator.dt)
+    if planner.path_found and not np.isclose(
+        path_motion_time, float(planner.path_time), rtol=0.0, atol=1e-9
+    ):
+        raise RuntimeError(
+            "Stored FlowEBRRT path duration disagrees with its dense integration "
+            f"path: tree={planner.path_time}, dense={path_motion_time}"
+        )
     generator_delta = profile_delta(generator.profile, before_planner)
     return {
         **problem,
@@ -344,9 +358,8 @@ def run_problem(
         "initial_normalized_distance": float(initial_distance),
         "final_normalized_distance": final_distance,
         "goal_radius": float(args.goal_radius),
-        "path_motion_time_seconds": (
-            float(planner.path_time) if planner.path_found else np.nan
-        ),
+        "path_motion_time_seconds": path_motion_time if planner.path_found else np.nan,
+        "path_waypoints": int(dense_path.shape[0]),
         "path_cost": float(planner.path_cost) if planner.path_found else np.nan,
         "checked_waypoints": int(agent.checked_waypoints),
         "limit_rejections": int(agent.limit_rejections),
@@ -402,6 +415,8 @@ def save_path_result(
         integration_dt=np.asarray(integration_dt),
         goal_radius=np.asarray(goal_radius),
         planner=np.asarray("FlowEBRRT"),
+        path_motion_time_seconds=np.asarray(result["path_motion_time_seconds"]),
+        path_waypoints=np.asarray(result["path_waypoints"]),
     )
 
 
@@ -429,6 +444,7 @@ def make_summary(results: list[dict[str, object]], elapsed: float) -> dict[str, 
         "num_problems": len(results),
         "num_successes": int(successes.sum()),
         "success_rate": float(successes.mean()),
+        "solution_quality": solution_quality_summary(results),
         "planning_time_seconds_all": {
             "mean": float(times.mean()),
             "median": float(np.median(times)),
@@ -579,6 +595,11 @@ def main() -> None:
         "goal_radius": args.goal_radius,
         "goal_metric": "normalized_7d_joint_position_l2",
         "goal_sampling_probability": args.goal_sampling_probability,
+        "goal_parent_metric": (
+            "FrankaPanda policy: normalized 7D joint position for explicitly "
+            "goal-biased samples; normalized 14D joint position and velocity "
+            "for ordinary samples"
+        ),
         "max_random_edge_time": args.max_random_edge_time,
         "acceleration_scale": args.acceleration_scale,
         "max_iterations": args.max_iterations,
@@ -672,8 +693,9 @@ def main() -> None:
         "minimum_flow_prefix_steps": args.minimum_flow_prefix_steps,
         "flow_prefix_truncation": False,
         "flow_edge_ranking": (
-            "FM-predicted query-relative terminal 14D state; candidates are "
-            "traversed nearest-first and propagated for their full predicted N"
+            "FM-predicted terminal normalized 7D joint position; target velocity "
+            "is ignored; candidates are traversed nearest-first and propagated "
+            "for their full predicted N"
         ),
         "num_sorted_edge_trials": args.num_sorted_edge_trials,
         "num_random_edges": args.num_random_edges,
@@ -684,9 +706,8 @@ def main() -> None:
         "collision_asset_sha256": collision_hashes,
         "environment": ENVIRONMENT_DESCRIPTION,
         "collision_geometry_note": (
-            "Paired Vanilla/Flow benchmark proxy: the shared PyBullet URDF fixes "
-            "the gripper origins at y=+/-0.065 m, whereas the CuRobo source robot "
-            "uses +/-0.04 m. Both planners use the same proxy geometry."
+            "Both planners use the same MorphIt sphere model generated from the "
+            "project's exact Panda collision meshes and SRDF exclusions."
         ),
         "command": [sys.executable, *sys.argv],
         "source_file_sha256": source_hashes,

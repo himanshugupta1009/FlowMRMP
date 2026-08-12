@@ -33,11 +33,17 @@ from franka_paths import (
     DEFAULT_URDF,
     DEFAULT_VANILLA_RESULTS_ROOT as DEFAULT_RESULTS_ROOT,
 )
+from franka_solution_quality import (
+    path_motion_time_from_states,
+    solution_quality_summary,
+)
 
-if str(FLOWMRMP_SRC) not in sys.path:
-    sys.path.insert(0, str(FLOWMRMP_SRC))
+MAIN_SCRIPTS = Path(__file__).resolve().parents[1]
+for module_path in (MAIN_SCRIPTS, FLOWMRMP_SRC):
+    if str(module_path) not in sys.path:
+        sys.path.insert(0, str(module_path))
 
-from Agents.FrankaPanda import (  # noqa: E402
+from FrankaPanda import (  # noqa: E402
     EmptyFrankaEnvironment,
     FrankaPanda,
     FrankaSelfCollisionChecker,
@@ -66,7 +72,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--goal-radius",
         type=float,
-        default=0.25,
+        default=0.40,
         help="Normalized 7D joint-position goal radius.",
     )
     parser.add_argument("--goal-sampling-probability", type=float, default=0.30)
@@ -304,6 +310,16 @@ def run_problem(problem: dict[str, object]) -> dict[str, object]:
     path_node_id = int(rrt.goal_node_id) if rrt.path_found else best_node_id
     dense_path = dense_path_to_node(rrt, path_node_id)
     final_distance = float(agent.get_goal_distance(dense_path[-1], goal))
+    path_motion_time = path_motion_time_from_states(
+        dense_path, float(config["integration_dt"])
+    )
+    if rrt.path_found and not np.isclose(
+        path_motion_time, float(rrt.path_time), rtol=0.0, atol=1e-9
+    ):
+        raise RuntimeError(
+            "Stored RRT path duration disagrees with its dense integration path: "
+            f"tree={rrt.path_time}, dense={path_motion_time}"
+        )
     return {
         **problem,
         "seed": seed,
@@ -314,7 +330,8 @@ def run_problem(problem: dict[str, object]) -> dict[str, object]:
         "initial_normalized_distance": float(initial_distance),
         "final_normalized_distance": final_distance,
         "goal_radius": float(config["goal_radius"]),
-        "path_motion_time_seconds": float(rrt.path_time) if rrt.path_found else np.nan,
+        "path_motion_time_seconds": path_motion_time if rrt.path_found else np.nan,
+        "path_waypoints": int(dense_path.shape[0]),
         "path_cost": float(rrt.path_cost) if rrt.path_found else np.nan,
         "checked_waypoints": int(agent.checked_waypoints),
         "limit_rejections": int(agent.limit_rejections),
@@ -336,6 +353,7 @@ def write_trial_csv(path: Path, results: list[dict[str, object]]) -> None:
         "final_normalized_distance",
         "goal_radius",
         "path_motion_time_seconds",
+        "path_waypoints",
         "path_cost",
         "checked_waypoints",
         "limit_rejections",
@@ -367,6 +385,7 @@ def make_summary(results: list[dict[str, object]], elapsed: float) -> dict[str, 
         "num_problems": len(results),
         "num_successes": int(success.sum()),
         "success_rate": float(success.mean()),
+        "solution_quality": solution_quality_summary(results),
         "planning_time_seconds_all": {
             "mean": float(times.mean()),
             "median": float(np.median(times)),
@@ -497,6 +516,16 @@ def main() -> None:
         "goal_radius": args.goal_radius,
         "goal_metric": "normalized_7d_joint_position_l2",
         "goal_sampling_probability": args.goal_sampling_probability,
+        "goal_parent_metric": (
+            "FrankaPanda policy: normalized 7D joint position for explicitly "
+            "goal-biased samples; normalized 14D joint position and velocity "
+            "for ordinary samples"
+        ),
+        "extension_candidate_metric": (
+            "FrankaPanda policy: actual normalized 7D joint-position distance "
+            "for goal-biased samples; actual normalized 14D state distance for "
+            "ordinary samples"
+        ),
         "max_edge_time": args.max_edge_time,
         "integration_dt": args.integration_dt,
         "extension_trials": args.extension_trials,
@@ -547,6 +576,8 @@ def main() -> None:
             success=np.array(result["success"]),
             integration_dt=np.array(args.integration_dt),
             goal_radius=np.array(args.goal_radius),
+            path_motion_time_seconds=np.array(result["path_motion_time_seconds"]),
+            path_waypoints=np.array(result["path_waypoints"]),
         )
         result.pop("start")
         result.pop("goal")
@@ -560,8 +591,9 @@ def main() -> None:
         "state_bank_size": args.state_bank_size,
         "problem_sampling": problem_sampling,
         "environment": (
-            "empty; self-collision and joint/velocity limits checked per "
-            "waypoint; acceleration limits enforced on sampled controls"
+            "empty; joint/velocity limits and MorphIt/cuRobo self-collision "
+            "checked in batched rollout edges; acceleration limits enforced "
+            "on sampled controls"
         ),
     }
     summary["created_utc"] = datetime.now(timezone.utc).isoformat()

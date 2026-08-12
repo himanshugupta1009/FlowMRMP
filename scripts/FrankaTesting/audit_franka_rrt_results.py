@@ -20,10 +20,12 @@ from franka_paths import (
     path_label,
 )
 
-if str(FLOWMRMP_SRC) not in sys.path:
-    sys.path.insert(0, str(FLOWMRMP_SRC))
+MAIN_SCRIPTS = Path(__file__).resolve().parents[1]
+for module_path in (MAIN_SCRIPTS, FLOWMRMP_SRC):
+    if str(module_path) not in sys.path:
+        sys.path.insert(0, str(module_path))
 
-from Agents.FrankaPanda import (  # noqa: E402
+from FrankaPanda import (  # noqa: E402
     DQ_MAX,
     FrankaPanda,
     FrankaSelfCollisionChecker,
@@ -58,7 +60,7 @@ def collision_asset_hashes(urdf_path: Path) -> dict[str, str]:
 
 def dependency_versions() -> dict[str, str | None]:
     versions: dict[str, str | None] = {}
-    for name in ("numpy", "pybullet"):
+    for name in ("numpy", "torch", "curobo", "pybullet"):
         try:
             versions[name] = importlib_metadata.version(name)
         except importlib_metadata.PackageNotFoundError:
@@ -70,6 +72,15 @@ def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--results-dir", type=Path, required=True)
     parser.add_argument("--urdf", type=Path, default=DEFAULT_URDF)
+    parser.add_argument(
+        "--scene-json",
+        type=Path,
+        default=None,
+        help=(
+            "Optional cuRobo scene JSON. When omitted, use scene_model from "
+            "the saved benchmark configuration when present."
+        ),
+    )
     parser.add_argument(
         "--expected-count",
         type=int,
@@ -95,7 +106,6 @@ def main() -> None:
     path_files = sorted((results_dir / "paths").glob("problem_*.npz"))
     if not path_files:
         raise FileNotFoundError(f"No problem paths in {results_dir / 'paths'}")
-    checker = FrankaSelfCollisionChecker(args.urdf)
     failures = []
     expected_count = (
         int(args.expected_count)
@@ -103,6 +113,15 @@ def main() -> None:
         else int(summary_data["num_problems"])
     )
     configuration = summary_data.get("configuration", {})
+    configured_scene_model = configuration.get("scene_model")
+    scene_model = configured_scene_model
+    if args.scene_json is not None:
+        scene_model = json.loads(args.scene_json.resolve().read_text(encoding="utf-8"))
+        if configured_scene_model is not None and scene_model != configured_scene_model:
+            failures.append(
+                {"reason": "scene JSON differs from benchmark configuration"}
+            )
+    checker = FrankaSelfCollisionChecker(args.urdf, scene_model=scene_model)
     if configuration.get("goal_metric") != "normalized_7d_joint_position_l2":
         failures.append(
             {
@@ -364,7 +383,7 @@ def main() -> None:
                         failures.append(
                             {
                                 "problem_id": int(row_index),
-                                "reason": f"canonical {label} self-collides",
+                                "reason": f"canonical {label} collides with robot or scene",
                             }
                         )
         for path_file in path_files:
@@ -472,7 +491,7 @@ def main() -> None:
                 failures.append(
                     {
                         "file": path_file.name,
-                        "reason": "self-collision",
+                        "reason": "robot or scene collision",
                         "waypoint": collision,
                     }
                 )
@@ -541,8 +560,8 @@ def main() -> None:
         )
     source_hashes = {
         path_label(Path(__file__).resolve()): file_sha256(Path(__file__).resolve()),
-        path_label(FLOWMRMP_SRC / "Agents" / "FrankaPanda.py"): file_sha256(
-            FLOWMRMP_SRC / "Agents" / "FrankaPanda.py"
+        path_label(MAIN_SCRIPTS / "FrankaPanda.py"): file_sha256(
+            MAIN_SCRIPTS / "FrankaPanda.py"
         ),
     }
 
@@ -563,6 +582,7 @@ def main() -> None:
             "platform": platform.platform(),
             "dependencies": dependency_versions(),
         },
+        "scene_model": scene_model,
         "canonical_problem_provenance_verified": bool(
             problems_sha256 is not None
             and not any(
@@ -580,10 +600,10 @@ def main() -> None:
             "finite 14D states",
             "Franka joint limits",
             "Franka velocity limits",
-            "PyBullet self-collision",
+            "active Franka backend robot and scene collision (MorphIt/cuRobo by default)",
             "successful endpoint within normalized goal radius",
             "trials/paths/summary/run-config completeness and numeric agreement",
-            "saved path starts plus canonical finite, limit-valid, self-collision-free A-B provenance",
+            "saved path starts plus canonical finite, limit-valid, robot/scene-collision-free A-B provenance",
             "per-problem planner time budget (0.25-second tolerance)",
             "collision assets and immutable result artifact fingerprints",
         ],

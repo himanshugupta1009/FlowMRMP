@@ -100,18 +100,26 @@ def quad6D_point_translate_function_kd_tree_numba(base_point,
     #Returing this as a numpy array slows kinoTIEBRRT down, so don't - Himanshu
 
 @njit
-def quad_xyz_dist_after_edge(base_point, edge_end_point, random_point):
-    dxp = (base_point[0] + edge_end_point[0]) - random_point[0]
-    dyp = (base_point[1] + edge_end_point[1]) - random_point[1]
-    dzp = (base_point[2] + edge_end_point[2]) - random_point[2]
+def quad_xyz_dist_after_edge(base_point, edge_start_point, edge_end_point,
+                             timestep, random_point):
+    # Exact double-integrator endpoint prediction: the stored displacement
+    # plus the velocity-mismatch drift (v_node - v_edge_start) * T. This is
+    # exact because propagation applies no velocity clamping.
+    dxp = (base_point[0] + edge_end_point[0]
+           + (base_point[3] - edge_start_point[3]) * timestep) - random_point[0]
+    dyp = (base_point[1] + edge_end_point[1]
+           + (base_point[4] - edge_start_point[4]) * timestep) - random_point[1]
+    dzp = (base_point[2] + edge_end_point[2]
+           + (base_point[5] - edge_start_point[5]) * timestep) - random_point[2]
     return math.sqrt(dxp*dxp + dyp*dyp + dzp*dzp)
 
 
 @njit
 def quad_sort_kd_tree_edges_numba(closest_tree_point,random_point,
-                                start_states,final_states,curr_edge_indices,
+                                start_states,final_states,timesteps,
+                                curr_edge_indices,
                                 curr_edge_mask,distance_array):
-    
+    """Original combined Numba scoring-and-full-sorting implementation."""
     n = curr_edge_indices.shape[0]
     num_valid_edges = 0
 
@@ -127,16 +135,46 @@ def quad_sort_kd_tree_edges_numba(closest_tree_point,random_point,
             # dist = euclidean_distance_numba_with_l(potential_new_point, 
             #                                        random_point, 3)
             dist = quad_xyz_dist_after_edge(closest_tree_point,
-                                    final_states[edge_idx], random_point)
+                                    start_states[edge_idx],
+                                    final_states[edge_idx],
+                                    timesteps[edge_idx], random_point)
             distance_array[i] = dist
             num_valid_edges += 1
 
     sorted_indices = np.argsort(distance_array[:n])
     return sorted_indices[:num_valid_edges], num_valid_edges
 
+
+@njit
+def quad_score_kd_tree_edges_numba(closest_tree_point, random_point,
+                                start_states, final_states, timesteps,
+                                curr_edge_indices,
+                                curr_edge_mask, distance_array):
+    """Score 3D quadcopter candidates in Numba without ranking the scores."""
+    n = curr_edge_indices.shape[0]
+    num_valid_edges = 0
+
+    for i in range(n):
+        if curr_edge_mask[i]:
+            distance_array[i] = 1e10
+        else:
+            edge_idx = curr_edge_indices[i]
+            distance_array[i] = quad_xyz_dist_after_edge(
+                closest_tree_point,
+                start_states[edge_idx],
+                final_states[edge_idx],
+                timesteps[edge_idx],
+                random_point,
+            )
+            num_valid_edges += 1
+
+    return num_valid_edges
+
+
 @njit
 def quad_no_sorting_kd_tree_edges_numba(closest_tree_point, random_point,
-                                start_states, final_states, curr_edge_indices,
+                                start_states, final_states, timesteps,
+                                curr_edge_indices,
                                 curr_edge_mask, distance_array):
     n = curr_edge_indices.shape[0]
     num_valid_edges = 0
@@ -311,24 +349,61 @@ class QuadCopter6D:
 
     @staticmethod
     def sort_kd_tree_edges(closest_tree_point, random_point, start_states,
-            final_states, curr_edge_indices, curr_edge_mask, distance_array):
+            final_states, timesteps, curr_edge_indices, curr_edge_mask,
+            distance_array):
         """
-        Sorts edges based on their distance from a base point.
+        Score 3D candidates in Numba, then fully rank with NumPy's argsort.
         """
-        return quad_sort_kd_tree_edges_numba(closest_tree_point, random_point,
-                                            start_states, final_states,
-                                            curr_edge_indices, curr_edge_mask,
-                                            distance_array)
+        num_valid_edges = quad_score_kd_tree_edges_numba(
+            closest_tree_point, random_point, start_states, final_states,
+            timesteps, curr_edge_indices, curr_edge_mask, distance_array)
+        sorted_indices = np.argsort(distance_array[:curr_edge_indices.shape[0]])
+        return sorted_indices[:num_valid_edges], num_valid_edges
+
+    @staticmethod
+    def sort_kd_tree_edges_combined_numba(closest_tree_point, random_point,
+            start_states, final_states, timesteps, curr_edge_indices,
+            curr_edge_mask, distance_array):
+        """Retained original combined Numba scoring-and-sorting path."""
+        return quad_sort_kd_tree_edges_numba(
+            closest_tree_point, random_point, start_states, final_states,
+            timesteps, curr_edge_indices, curr_edge_mask, distance_array)
+
+    @staticmethod
+    def select_kd_tree_edges_numpy_argpartition_geometric(
+            closest_tree_point, random_point, start_states, final_states,
+            timesteps, curr_edge_indices, curr_edge_mask, distance_array,
+            candidate_ranks):
+        """
+        Score in Numba and partition at the caller-provided geometric ranks.
+
+        Ranking uses the exact 3D double-integrator endpoint prediction.
+        candidate_ranks must match the exact valid-edge count for this call.
+
+        This is retained as a benchmark/reference implementation. Tests using
+        the 3D edge bundle and KCBS 3D SWAP found that argpartition + geometric
+        and full argsort + geometric selected the same candidates and produced
+        identical planner results, while full sort was computationally
+        preferable overall. KiTE-RRT therefore uses its fully sorted order.
+        """
+        num_valid_edges = quad_score_kd_tree_edges_numba(
+            closest_tree_point, random_point, start_states, final_states,
+            timesteps, curr_edge_indices, curr_edge_mask, distance_array)
+        partitioned_indices = np.argpartition(
+            distance_array[:curr_edge_indices.shape[0]], candidate_ranks)
+        return partitioned_indices, num_valid_edges
 
     @staticmethod
     def no_sorting_kd_tree_edges(closest_tree_point, random_point, start_states,
-            final_states, curr_edge_indices, curr_edge_mask, distance_array):
+            final_states, timesteps, curr_edge_indices, curr_edge_mask,
+            distance_array):
         """
         Returns unexplored edge candidate indices without distance sorting.
         """
         return quad_no_sorting_kd_tree_edges_numba(closest_tree_point,
                                             random_point, start_states,
-                                            final_states, curr_edge_indices,
+                                            final_states, timesteps,
+                                            curr_edge_indices,
                                             curr_edge_mask, distance_array)
     
     def get_eb_kd_tree_query(self, state):

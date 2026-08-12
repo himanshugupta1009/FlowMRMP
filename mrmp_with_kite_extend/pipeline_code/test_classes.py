@@ -2,6 +2,7 @@ import contextlib
 import os
 import sys
 import time
+from dataclasses import asdict, is_dataclass
 
 import numpy as np
 import yaml
@@ -16,6 +17,14 @@ from constrainedX import (
     ConstrainedEdgeBundleType2RRT,
     ConstrainedKinoTIEBRRT,
     ConstrainedRRT,
+)
+from db.cpp_dynoplan_optimize_unicycle import (
+    CppDynoplanUnicycleOptimizerOptions,
+    optimize_dbrrt_unicycle_path_with_cpp_dynoplan,
+)
+from db.cpp_dynoplan_optimize_quadcopter6d import (
+    CppDynoplanQuadcopter6DOptimizerOptions,
+    optimize_dbrrt_quadcopter6d_path_with_cpp_dynoplan,
 )
 from kcbs import KCBS, check_high_resolution_paths_collision_free
 from kinodynamic_TI_eb_crrt import KinoTIEBCRRT
@@ -78,6 +87,8 @@ def _common_kcbs_params(test_class):
         "planning_time": test_class.max_planning_time,
         "clearance_threshold": test_class.dynamic_agent_clearance,
         "rng_seed": "round seed",
+        "reuse_tree": getattr(test_class, "reuse_tree", False),
+        "store_cbs_nodes": test_class.store_cbs_nodes,
     }
 
 
@@ -87,6 +98,16 @@ def _runtime_param(test_class, key, source):
     if key in runtime_values:
         value["value"] = runtime_values[key]
     return value
+
+
+def _manifest_options(options):
+    if options is None:
+        return None
+    if is_dataclass(options):
+        return asdict(options)
+    if isinstance(options, dict):
+        return dict(options)
+    return repr(options)
 
 
 def _manifest_planner_constructor_params(test_class):
@@ -123,6 +144,9 @@ def _manifest_planner_constructor_params(test_class):
             "max_num_edges_per_node": test_class.max_num_edges_per_node,
             "num_extension_trials": test_class.num_extension_trials,
             "num_edge_candidates_per_agent": test_class.num_edge_candidates_per_agent,
+            "rank_candidates": "all(agent.sort_edges)",
+            "use_geometric_candidate_schedule":
+                test_class.use_geometric_candidate_schedule,
             "max_joint_edge_trials": test_class.max_joint_edge_trials,
             "epsilon_random": test_class.epsilon_random,
             "fallback_to_random_control": test_class.fallback_to_random_control,
@@ -189,6 +213,9 @@ def _manifest_planner_constructor_params(test_class):
                     test_class, "agent_num_skip_edges",
                     "agent.num_skip_edges"),
                 "num_random_edges": test_class.num_extension_trials,
+                "rank_candidates": "agent.sort_edges",
+                "use_geometric_candidate_schedule":
+                    test_class.use_geometric_candidate_schedule,
                 "kd_tree_delta_radius": test_class.kd_delta_radius,
                 "udf_seed": "agent.seed * round seed",
                 "goal_sampling_probability": test_class.goal_sampling_probability,
@@ -215,8 +242,11 @@ def _manifest_planner_constructor_params(test_class):
                 "max_iter": test_class.num_low_level_planner_iterations,
                 "num_extension_trials": test_class.num_extension_trials,
                 "planning_time": 2 * test_class.max_planning_time,
+                "goal_sampling_probability":
+                    test_class.goal_sampling_probability,
                 "udf_seed": "agent.seed * round seed",
                 "use_fixed_sampling_time": False,
+                "use_goal_parking_fix": test_class.use_goal_parking_fix,
             },
         }
 
@@ -238,8 +268,11 @@ def _manifest_planner_constructor_params(test_class):
                     test_class, "agent_num_skip_edges",
                     "agent.num_skip_edges"),
                 "planning_time": 2 * test_class.max_planning_time,
+                "goal_sampling_probability":
+                    test_class.goal_sampling_probability,
                 "udf_seed": "agent.seed * round seed",
                 "use_fixed_sampling_time": False,
+                "use_goal_parking_fix": test_class.use_goal_parking_fix,
             },
         }
 
@@ -264,8 +297,16 @@ def _manifest_planner_constructor_params(test_class):
                     "agent.num_skip_edges"),
                 "epsilon_random": test_class.epsilon_random,
                 "num_random_edges": test_class.num_extension_trials,
+                "rank_candidates": "agent.sort_edges",
+                "use_geometric_candidate_schedule":
+                    test_class.use_geometric_candidate_schedule,
                 "kd_tree_delta_radius": test_class.kd_delta_radius,
+                "goal_sampling_probability":
+                    test_class.goal_sampling_probability,
+                "dynamic_agent_clearance":
+                    test_class.dynamic_agent_clearance,
                 "udf_seed": "overwritten by KCBS init",
+                "use_goal_parking_fix": test_class.use_goal_parking_fix,
             },
         }
 
@@ -289,8 +330,12 @@ def _manifest_planner_constructor_params(test_class):
                 "goal_expand_mode": "focused",
                 "random_expand_mode": "randomized",
                 "dynamic_agent_clearance": test_class.dynamic_agent_clearance,
+                "use_goal_parking_fix": test_class.use_goal_parking_fix,
                 "udf_seed": "overwritten by KCBS init",
                 "use_optimizer": test_class.use_optimizer,
+                "optimizer_backend": test_class.optimizer_backend,
+                "cpp_optimizer_options": _manifest_options(
+                    test_class.cpp_optimizer_options),
             },
         }
 
@@ -482,20 +527,18 @@ class CRRTTestClass(AbstractTestClass):
         if (not crrt.path_found) or (not within_max_time):
             success=False
 
-        highres_paths = dict(enumerate(crrt.get_high_resolution_paths()))
-        paths, states, controls, timesteps, costs = crrt.get_path()
-
-        if(self.printenv):
+        if self.printenv and success:
+            highres_paths = dict(enumerate(crrt.get_high_resolution_paths()))
+            paths, states, controls, timesteps, costs = crrt.get_path()
             pcol = ['xkcd:powder pink', 'xkcd:metallic blue', 'xkcd:pastel orange',
                     'xkcd:pastel blue', 'xkcd:terracotta', 'xkcd:purplish grey',
                     'xkcd:powder pink', 'xkcd:metallic blue', 'xkcd:pastel orange',
                     'xkcd:pastel blue', 'xkcd:terracotta', 'xkcd:purplish grey']
-            if success:
-                mprint = MultiRRTPrinter(env, crrt, paths, pcol, pcol, joint_states=True)
-                mprint.print_rrt('crrt_pipeline_' + str(seed) + "_" + str(len(agents)) + '.png',
-                                 print_tree=False)
-                mprint.print_highres_simulation(highres_paths,
-                'crrt_pipeline_' + str(seed) + "_" + str(len(agents)) + '.gif', animation_speed=100)
+            mprint = MultiRRTPrinter(env, crrt, paths, pcol, pcol, joint_states=True)
+            mprint.print_rrt('crrt_pipeline_' + str(seed) + "_" + str(len(agents)) + '.png',
+                             print_tree=False)
+            mprint.print_highres_simulation(highres_paths,
+            'crrt_pipeline_' + str(seed) + "_" + str(len(agents)) + '.gif', animation_speed=100)
 
 
         if not success:
@@ -607,20 +650,18 @@ class CRRTEBTestClass(AbstractTestClass):
         if (not crrt.path_found) or (not within_max_time):
             success=False
 
-        highres_paths = dict(enumerate(crrt.get_high_resolution_paths()))
-        paths, states, controls, timesteps, costs = crrt.get_path()
-
-        if(self.printenv):
+        if self.printenv and success:
+            highres_paths = dict(enumerate(crrt.get_high_resolution_paths()))
+            paths, states, controls, timesteps, costs = crrt.get_path()
             pcol = ['xkcd:powder pink', 'xkcd:metallic blue', 'xkcd:pastel orange',
                     'xkcd:pastel blue', 'xkcd:terracotta', 'xkcd:purplish grey',
                     'xkcd:powder pink', 'xkcd:metallic blue', 'xkcd:pastel orange',
                     'xkcd:pastel blue', 'xkcd:terracotta', 'xkcd:purplish grey']
-            if success:
-                mprint = MultiRRTPrinter(env, crrt, paths, pcol, pcol, joint_states=True)
-                mprint.print_rrt('crrt_eb_pipeline_' + str(seed) + "_" + str(len(agents)) + '.png',
-                                 print_tree=False)
-                mprint.print_highres_simulation(highres_paths,
-                'crrt_eb_pipeline_' + str(seed) + "_" + str(len(agents)) + '.gif', animation_speed=100)
+            mprint = MultiRRTPrinter(env, crrt, paths, pcol, pcol, joint_states=True)
+            mprint.print_rrt('crrt_eb_pipeline_' + str(seed) + "_" + str(len(agents)) + '.png',
+                             print_tree=False)
+            mprint.print_highres_simulation(highres_paths,
+            'crrt_eb_pipeline_' + str(seed) + "_" + str(len(agents)) + '.gif', animation_speed=100)
 
 
         if not success:
@@ -652,6 +693,7 @@ class KinoTiCRRTEBTestClass(AbstractTestClass):
                  max_num_edges_per_node=1000,
                  num_extension_trials=1,
                  num_edge_candidates_per_agent=10,
+                 use_geometric_candidate_schedule=True,
                  max_joint_edge_trials=15,
                  epsilon_random=0.01,
                  fallback_to_random_control=True,
@@ -672,6 +714,8 @@ class KinoTiCRRTEBTestClass(AbstractTestClass):
         self.max_num_edges_per_node = max_num_edges_per_node
         self.num_extension_trials = num_extension_trials
         self.num_edge_candidates_per_agent = num_edge_candidates_per_agent
+        self.use_geometric_candidate_schedule = bool(
+            use_geometric_candidate_schedule)
         self.max_joint_edge_trials = max_joint_edge_trials
         self.epsilon_random = epsilon_random
         self.fallback_to_random_control = fallback_to_random_control
@@ -748,6 +792,9 @@ class KinoTiCRRTEBTestClass(AbstractTestClass):
                     max_num_edges_per_node=self.max_num_edges_per_node,
                     num_extension_trials=self.num_extension_trials,
                     num_edge_candidates_per_agent=self.num_edge_candidates_per_agent,
+                    rank_candidates=all(a.sort_edges is True for a in agents),
+                    use_geometric_candidate_schedule=(
+                        self.use_geometric_candidate_schedule),
                     max_joint_edge_trials=self.max_joint_edge_trials,
                     epsilon_random=self.epsilon_random,
                     fallback_to_random_control=self.fallback_to_random_control,
@@ -770,20 +817,18 @@ class KinoTiCRRTEBTestClass(AbstractTestClass):
         if (not crrt.path_found) or (not within_max_time):
             success=False
 
-        highres_paths = dict(enumerate(crrt.get_high_resolution_paths()))
-        paths, states, controls, timesteps, costs = crrt.get_path()
-
-        if(self.printenv):
+        if self.printenv and success:
+            highres_paths = dict(enumerate(crrt.get_high_resolution_paths()))
+            paths, states, controls, timesteps, costs = crrt.get_path()
             pcol = ['xkcd:powder pink', 'xkcd:metallic blue', 'xkcd:pastel orange',
                     'xkcd:pastel blue', 'xkcd:terracotta', 'xkcd:purplish grey',
                     'xkcd:powder pink', 'xkcd:metallic blue', 'xkcd:pastel orange',
                     'xkcd:pastel blue', 'xkcd:terracotta', 'xkcd:purplish grey']
-            if success:
-                mprint = MultiRRTPrinter(env, crrt, paths, pcol, pcol, joint_states=True)
-                mprint.print_rrt('crrt_eb_pipeline_' + str(seed) + "_" + str(len(agents)) + '.png',
-                                 print_tree=False)
-                mprint.print_highres_simulation(highres_paths,
-                'crrt_eb_pipeline_' + str(seed) + "_" + str(len(agents)) + '.gif', animation_speed=100)
+            mprint = MultiRRTPrinter(env, crrt, paths, pcol, pcol, joint_states=True)
+            mprint.print_rrt('crrt_eb_pipeline_' + str(seed) + "_" + str(len(agents)) + '.png',
+                             print_tree=False)
+            mprint.print_highres_simulation(highres_paths,
+            'crrt_eb_pipeline_' + str(seed) + "_" + str(len(agents)) + '.gif', animation_speed=100)
 
 
         if not success:
@@ -1066,6 +1111,7 @@ class PrioritizedKinoTIRRTTestClass(AbstractTestClass):
                 num_extension_trials=1, #num_random_edges for Kite (default is 1)
                 epsilon_random=0.01,
                 goal_sampling_probability=0.01,
+                use_geometric_candidate_schedule=True,
                 dynamic_agent_clearance=0.0,
                 ):
         
@@ -1081,6 +1127,8 @@ class PrioritizedKinoTIRRTTestClass(AbstractTestClass):
         self.max_num_edges_per_node = max_num_edges_per_node
         self.num_extension_trials = num_extension_trials
         self.epsilon_random = epsilon_random
+        self.use_geometric_candidate_schedule = bool(
+            use_geometric_candidate_schedule)
 
     def test_func(self, agents, starts, obstacles, goals, goal_radii,
                   seed, env_width, env_depth, env_height=None):
@@ -1123,7 +1171,11 @@ class PrioritizedKinoTIRRTTestClass(AbstractTestClass):
                     sort_edges_function=sort_kd_func,
                     max_num_edges_per_node=self.max_num_edges_per_node,
                     num_skip_edges= agent.num_skip_edges,
+                    rank_candidates=(agent.sort_edges is True),
+                    use_geometric_candidate_schedule=(
+                        self.use_geometric_candidate_schedule),
                     num_random_edges= self.num_extension_trials,
+                    epsilon_random=self.epsilon_random,
                     eb_kd_tree=kd_tree_ti_eb,
                     get_eb_kd_tree_query=agent_obj.get_eb_kd_tree_query,
                     kd_tree_delta_radius=self.kd_delta_radius,
@@ -1193,7 +1245,11 @@ class KcbsTestClass(AbstractTestClass):
                 debug_flag = False, obs_buffers = True,
                 num_low_level_planner_iterations=10000,
                 num_extension_trials=10,
-                dynamic_agent_clearance=0.0):
+                goal_sampling_probability=0.1,
+                use_goal_parking_fix=True,
+                reuse_tree=False,
+                dynamic_agent_clearance=0.0,
+                store_cbs_nodes=False):
         
         super().__init__(printenv, max_planning_time=max_planning_time,
                          print_logs=print_logs, debug_flag=debug_flag,
@@ -1203,7 +1259,11 @@ class KcbsTestClass(AbstractTestClass):
         self.collision_checks = collision_checks
         self.num_low_level_planner_iterations = num_low_level_planner_iterations
         self.num_extension_trials = num_extension_trials
+        self.goal_sampling_probability = goal_sampling_probability
+        self.use_goal_parking_fix = bool(use_goal_parking_fix)
+        self.reuse_tree = bool(reuse_tree)
         self.dynamic_agent_clearance = dynamic_agent_clearance
+        self.store_cbs_nodes = store_cbs_nodes
 
 
     def test_func(self, agents, starts, obstacles, goals, goal_radii,
@@ -1237,6 +1297,8 @@ class KcbsTestClass(AbstractTestClass):
                     reached_goal_function = agent.get_reached_goal_function(),
                     udf_seed = agent.seed * seed,
                     use_fixed_sampling_time=False,
+                    goal_sampling_probability=self.goal_sampling_probability,
+                    use_goal_parking_fix=self.use_goal_parking_fix,
                     print_logs=self.print_logs,
                     debug_flag=self.debug_flag
                 ))
@@ -1248,10 +1310,12 @@ class KcbsTestClass(AbstractTestClass):
                     planning_time = self.max_planning_time,
                     clearance_threshold=self.dynamic_agent_clearance,
                     print_logs=self.print_logs,
-                    rng_seed=seed
+                    rng_seed=seed,
+                    reuse_tree=self.reuse_tree,
+                    store_cbs_nodes=self.store_cbs_nodes
                     )  
         path_found, paths, cost, time = kcbs_planner.plan_multi_agent_paths()
-        message = "Conflict node count: " + str(kcbs_planner.node_list.count)
+        message = "Conflict node count: " + str(kcbs_planner.cbs_node_count)
         if time > self.max_planning_time:
             print("KCBS time overflow: found time of ", time)
             path_found = False
@@ -1268,12 +1332,11 @@ class KcbsTestClass(AbstractTestClass):
                 kcbs_planner.clearance_threshold,
                 kcbs_planner.roundoff_digits)
 
-        path_times = []
-        max_agent_path_time = 0
-        for planner in planners:
-            path_times.append(planner.path_time)
-            if planner.path_time > max_agent_path_time:
-                max_agent_path_time = planner.path_time
+        # Measure the paths stored in the returned CBS solution. A shared
+        # planner's path_time may describe its most recent replan instead.
+        path_times = [round((len(path) - 1) * kcbs_planner.minimum_time_step,
+                            kcbs_planner.roundoff_digits) for path in paths]
+        max_agent_path_time = max(path_times)
 
         if(self.printenv):
             planner_list = []
@@ -1305,7 +1368,11 @@ class KcbsEbTestClass(AbstractTestClass):
     def __init__(self, printenv = False, collision_checks = False, 
                 max_planning_time=300.,print_logs = False,
                 debug_flag = False, obs_buffers = True,
-                dynamic_agent_clearance=0.0):
+                goal_sampling_probability=0.1,
+                dynamic_agent_clearance=0.0,
+                use_goal_parking_fix=True,
+                reuse_tree=False,
+                store_cbs_nodes=False):
         
         super().__init__(printenv, max_planning_time=max_planning_time,
                         print_logs=print_logs, debug_flag=debug_flag,
@@ -1313,7 +1380,11 @@ class KcbsEbTestClass(AbstractTestClass):
         self.name = "KCBS using RRT With Type 2 Edge Bundles"
         self.short_name = "EB RRT KCBS"
         self.collision_checks = collision_checks
+        self.goal_sampling_probability = goal_sampling_probability
         self.dynamic_agent_clearance = dynamic_agent_clearance
+        self.use_goal_parking_fix = bool(use_goal_parking_fix)
+        self.reuse_tree = bool(reuse_tree)
+        self.store_cbs_nodes = store_cbs_nodes
 
     def test_func(self, agents, starts, obstacles, goals, goal_radii,
                   seed, env_width, env_depth, env_height=None):
@@ -1348,9 +1419,11 @@ class KcbsEbTestClass(AbstractTestClass):
                     reached_goal_function = agent.get_reached_goal_function(),
                     translate_function = agent.get_point_translate_function(),
                     sort_edges_function=agent.get_sort_edges_func(),
+                    goal_sampling_probability=self.goal_sampling_probability,
                     print_logs=self.print_logs,
                     debug_flag=self.debug_flag,
                     udf_seed = agent.seed * seed,
+                    use_goal_parking_fix=self.use_goal_parking_fix,
                     use_fixed_sampling_time=False)
                 )
 
@@ -1362,21 +1435,16 @@ class KcbsEbTestClass(AbstractTestClass):
                     planning_time = self.max_planning_time,
                     clearance_threshold=self.dynamic_agent_clearance,
                     print_logs=self.print_logs,
-                    rng_seed=seed
+                    rng_seed=seed,
+                    reuse_tree=self.reuse_tree,
+                    store_cbs_nodes=self.store_cbs_nodes
                     )  
         path_found, paths, cost, time = kcbs_planner.plan_multi_agent_paths()
-        message = "Conflict node count: " + str(kcbs_planner.node_list.count)
+        message = "Conflict node count: " + str(kcbs_planner.cbs_node_count)
         if time > self.max_planning_time:
             print("KCBS EB time overflow: found time of ", time)
             path_found = False
         total_time = min(time, self.max_planning_time)
-
-        path_times = []
-        max_agent_path_time = 0
-        for planner in planners:
-            path_times.append(planner.path_time)
-            if planner.path_time > max_agent_path_time:
-                max_agent_path_time = planner.path_time
 
         if(self.printenv):
             planner_list = []
@@ -1406,6 +1474,12 @@ class KcbsEbTestClass(AbstractTestClass):
                 kcbs_planner.clearance_threshold,
                 kcbs_planner.roundoff_digits)
 
+        # Measure the paths stored in the returned CBS solution. A shared
+        # planner's path_time may describe its most recent replan instead.
+        path_times = [round((len(path) - 1) * kcbs_planner.minimum_time_step,
+                            kcbs_planner.roundoff_digits) for path in paths]
+        max_agent_path_time = max(path_times)
+
         return (True, total_time, cost, np.average(path_times), max_agent_path_time, message)
     
 
@@ -1421,7 +1495,12 @@ class KcbsKinoTiEbTestClass(AbstractTestClass):
                 num_low_level_planner_iterations=10000,
                 num_extension_trials=1, #num_random_edges for Kite (default is 1)
                 epsilon_random=0.01,
-                dynamic_agent_clearance=0.0):
+                goal_sampling_probability=0.1,
+                use_goal_parking_fix=True,
+                reuse_tree=False,
+                use_geometric_candidate_schedule=True,
+                dynamic_agent_clearance=0.0,
+                store_cbs_nodes=False):
         
         super().__init__(printenv, max_planning_time=max_planning_time,
                          print_logs=print_logs, debug_flag=debug_flag,
@@ -1434,7 +1513,13 @@ class KcbsKinoTiEbTestClass(AbstractTestClass):
         self.max_num_edges_per_node = max_num_edges_per_node
         self.num_extension_trials = num_extension_trials
         self.epsilon_random = epsilon_random
+        self.goal_sampling_probability = goal_sampling_probability
+        self.use_goal_parking_fix = bool(use_goal_parking_fix)
+        self.reuse_tree = bool(reuse_tree)
+        self.use_geometric_candidate_schedule = bool(
+            use_geometric_candidate_schedule)
         self.dynamic_agent_clearance = dynamic_agent_clearance
+        self.store_cbs_nodes = store_cbs_nodes
 
     def test_func(self, agents, starts, obstacles, goals, goal_radii, 
                   seed, env_width, env_depth, env_height=None):
@@ -1477,11 +1562,17 @@ class KcbsKinoTiEbTestClass(AbstractTestClass):
                     sort_edges_function=sort_kd_func,
                     max_num_edges_per_node=self.max_num_edges_per_node,
                     num_skip_edges= agent.num_skip_edges,
+                    rank_candidates=(agent.sort_edges is True),
+                    use_geometric_candidate_schedule=(
+                        self.use_geometric_candidate_schedule),
                     epsilon_random=self.epsilon_random,
                     num_random_edges= self.num_extension_trials,
                     eb_kd_tree = kd_tree_ti_eb,
                     get_eb_kd_tree_query=agent_obj.get_eb_kd_tree_query,
                     kd_tree_delta_radius=self.kd_delta_radius,
+                    goal_sampling_probability=self.goal_sampling_probability,
+                    use_goal_parking_fix=self.use_goal_parking_fix,
+                    dynamic_agent_clearance=self.dynamic_agent_clearance,
                     udf_seed = 0, #Will be overwritten by KCBS init
                     debug_flag=False,
                     print_logs=False,)
@@ -1495,21 +1586,16 @@ class KcbsKinoTiEbTestClass(AbstractTestClass):
                     planning_time = self.max_planning_time,
                     clearance_threshold=self.dynamic_agent_clearance,
                     print_logs=self.print_logs,
-                    rng_seed=seed
+                    rng_seed=seed,
+                    reuse_tree=self.reuse_tree,
+                    store_cbs_nodes=self.store_cbs_nodes
                     )  
         path_found, paths, cost, time = kcbs_planner.plan_multi_agent_paths()
-        message = "Conflict node count: " + str(kcbs_planner.node_list.count)
+        message = "Conflict node count: " + str(kcbs_planner.cbs_node_count)
         if time > self.max_planning_time:
             print("KCBS Kino-TI EB time overflow: found time of ", time)
             path_found = False
         total_time = min(time, self.max_planning_time)
-
-        path_times = []
-        max_agent_path_time = 0
-        for planner in planners:
-            path_times.append(planner.path_time)
-            if planner.path_time > max_agent_path_time:
-                max_agent_path_time = planner.path_time
 
         if(self.printenv):
             planner_list = []
@@ -1539,6 +1625,12 @@ class KcbsKinoTiEbTestClass(AbstractTestClass):
                 kcbs_planner.clearance_threshold,
                 kcbs_planner.roundoff_digits)
 
+        # Measure the paths stored in the returned CBS solution. A shared
+        # planner's path_time may describe its most recent replan instead.
+        path_times = [round((len(path) - 1) * kcbs_planner.minimum_time_step,
+                            kcbs_planner.roundoff_digits) for path in paths]
+        max_agent_path_time = max(path_times)
+
         return (True, total_time, cost, np.average(path_times), max_agent_path_time, message)
 
 
@@ -1550,13 +1642,18 @@ class KcbsDbrrtTestClass(AbstractTestClass):
                 max_planning_time=300., print_logs = False,
                 debug_flag = False, obs_buffers = True,
                 use_optimizer=True,
+                optimizer_backend="auto",
+                cpp_optimizer_options=None,
                 num_low_level_planner_iterations=10000,
                 max_candidate_motions_per_expand=1000,
                 dbrrt_alpha=0.5,
                 dbrrt_delta=0.3,
                 cost_delta_factor=0.0,
                 goal_sampling_probability=0.1,
-                dynamic_agent_clearance=0.0):
+                use_goal_parking_fix=True,
+                reuse_tree=False,
+                dynamic_agent_clearance=0.0,
+                store_cbs_nodes=False):
         
         super().__init__(printenv, max_planning_time=max_planning_time,
                         print_logs=print_logs, debug_flag=debug_flag,
@@ -1570,8 +1667,62 @@ class KcbsDbrrtTestClass(AbstractTestClass):
         self.dbrrt_delta = dbrrt_delta
         self.cost_delta_factor = cost_delta_factor
         self.goal_sampling_probability = goal_sampling_probability
+        self.use_goal_parking_fix = bool(use_goal_parking_fix)
+        self.reuse_tree = bool(reuse_tree)
         self.use_optimizer = use_optimizer
+        self.optimizer_backend = optimizer_backend
+        self.cpp_optimizer_options = cpp_optimizer_options
         self.dynamic_agent_clearance = dynamic_agent_clearance
+        self.store_cbs_nodes = store_cbs_nodes
+
+    def _resolve_optimizer_backend(self, agent):
+        if self.optimizer_backend == "auto":
+            if getattr(agent, "dbcbs_name", None) in (
+                "unicycle1_sphere_v0",
+                "integrator2_3d_v0",
+            ):
+                return "cpp_dynoplan"
+            return "python"
+        return self.optimizer_backend
+
+    def _set_dbrrt_optimizer(self, planner, agent):
+        if not self.use_optimizer:
+            return
+
+        optimizer_backend = self._resolve_optimizer_backend(agent)
+        if optimizer_backend == "python":
+            planner.set_optimizer(agent.get_dbrrt_optimizer_function())
+            return
+
+        if optimizer_backend == "cpp_dynoplan":
+            dbcbs_name = getattr(agent, "dbcbs_name", None)
+            cpp_optimizer_options = self.cpp_optimizer_options
+            if dbcbs_name == "unicycle1_sphere_v0":
+                if cpp_optimizer_options is None:
+                    cpp_optimizer_options = CppDynoplanUnicycleOptimizerOptions()
+                planner.set_optimizer(
+                    lambda curr_planner: optimize_dbrrt_unicycle_path_with_cpp_dynoplan(
+                        curr_planner,
+                        options=cpp_optimizer_options,
+                    )
+                )
+                return
+            if dbcbs_name == "integrator2_3d_v0":
+                if cpp_optimizer_options is None:
+                    cpp_optimizer_options = CppDynoplanQuadcopter6DOptimizerOptions()
+                planner.set_optimizer(
+                    lambda curr_planner: optimize_dbrrt_quadcopter6d_path_with_cpp_dynoplan(
+                        curr_planner,
+                        options=cpp_optimizer_options,
+                    )
+                )
+                return
+            raise ValueError(
+                "optimizer_backend=cpp_dynoplan is only supported for "
+                "unicycle and quadcopter6d dbRRT planners"
+            )
+
+        raise ValueError(f"Unknown optimizer_backend: {optimizer_backend}")
 
     def _get_dbrrt_planner(self, agent, start, goal, goal_radius, env, agent_obj):
         motion_primitives, kd_tree = agent.get_dbrrt_motion_primitives()
@@ -1605,12 +1756,12 @@ class KcbsDbrrtTestClass(AbstractTestClass):
             goal_expand_mode="focused",
             random_expand_mode="randomized",
             dynamic_agent_clearance=self.dynamic_agent_clearance,
+            use_goal_parking_fix=self.use_goal_parking_fix,
             udf_seed=0,  # Will be overwritten by KCBS init.
             debug_flag=False,
             print_logs=False,
         )
-        if self.use_optimizer:
-            planner.set_optimizer(agent.get_dbrrt_optimizer_function())
+        self._set_dbrrt_optimizer(planner, agent)
         return planner
 
     def test_func(self, agents, starts, obstacles, goals, goal_radii,
@@ -1640,21 +1791,16 @@ class KcbsDbrrtTestClass(AbstractTestClass):
                     planning_time = self.max_planning_time,
                     clearance_threshold=self.dynamic_agent_clearance,
                     print_logs=self.print_logs,
-                    rng_seed=seed
+                    rng_seed=seed,
+                    reuse_tree=self.reuse_tree,
+                    store_cbs_nodes=self.store_cbs_nodes
                     )  
         path_found, paths, cost, time = kcbs_planner.plan_multi_agent_paths()
-        message = "Conflict node count: " + str(kcbs_planner.node_list.count)
+        message = "Conflict node count: " + str(kcbs_planner.cbs_node_count)
         if time > self.max_planning_time:
             print("KCBS idb-RRT time overflow: found time of ", time)
             path_found = False
         total_time = min(time, self.max_planning_time)
-
-        path_times = []
-        max_agent_path_time = 0
-        for planner in planners:
-            path_times.append(planner.path_time)
-            if planner.path_time > max_agent_path_time:
-                max_agent_path_time = planner.path_time
 
         if(self.printenv):
             planner_list = []
@@ -1683,6 +1829,12 @@ class KcbsDbrrtTestClass(AbstractTestClass):
                 agent_objs[0].distance_metric_state_size,
                 kcbs_planner.clearance_threshold,
                 kcbs_planner.roundoff_digits)
+
+        # Measure the paths stored in the returned CBS solution. A shared
+        # planner's path_time may describe its most recent replan instead.
+        path_times = [round((len(path) - 1) * kcbs_planner.minimum_time_step,
+                            kcbs_planner.roundoff_digits) for path in paths]
+        max_agent_path_time = max(path_times)
 
         return (True, total_time, cost, np.average(path_times), max_agent_path_time, message)
 

@@ -221,6 +221,7 @@ class KinoTIEBCRRT(CRRT):
                                                                        ((agent_index+1)*self.agent_position_state_dim)], 
                                                           eb.start_states,
                                                           eb.final_states,
+                                                          eb.timesteps,
                                                           curr_edge_indices, 
                                                           curr_edge_mask, 
                                                           self.distance_array[agent_index])

@@ -10,7 +10,8 @@ class PrioritizedPlanning:
     @staticmethod
     def plan_multi(*, planners: list[RRT], 
                     planning_time=300.0, 
-                    print_logs=False):
+                    print_logs=False,
+                    dynamic_obstacle_adapter=None):
         """Perform Priority Planning by a list of ordered planners
         Each agent plans its path individually in a priority order. Subsequent agents 
         must plan using the previous agents' positions along their paths as obstacles. 
@@ -19,9 +20,18 @@ class PrioritizedPlanning:
             planners (list<RRT>): list of planners conforming to the RRT interface
             planning_time (float, optional): maximum time to plan before failure. Defaults to 300.0.
             print_logs (bool, optional): Print information from RRT process. Defaults to False.
+            dynamic_obstacle_adapter (optional): Geometry-specific adapter with
+                reset, prepare_planner, and finish_planner hooks. When omitted,
+                preserve the legacy position-plus-radius trajectory encoding.
         """
-        #List of dynamic obstacles that will be updated with each planned path
-        dyn_obs = List.empty_list(types.Array(types.float64, 2, 'C'))
+        # The legacy representation stores one position-plus-radius trajectory
+        # per higher-priority agent. Articulated agents can supply an adapter
+        # that owns a richer time-indexed collision representation.
+        if dynamic_obstacle_adapter is None:
+            dyn_obs = List.empty_list(types.Array(types.float64, 2, 'C'))
+        else:
+            dyn_obs = []
+            dynamic_obstacle_adapter.reset()
 
         # total costs, will be updated with each planned path
         total_costs = 0.0
@@ -35,6 +45,8 @@ class PrioritizedPlanning:
             # set the dynamic obstacles to include previously-planned
             # agent paths
             planner.dynamic_agent_obstacles = dyn_obs
+            if dynamic_obstacle_adapter is not None:
+                dynamic_obstacle_adapter.prepare_planner(planner, i)
             # set the planning time to the remaining total planning time
             planner.planning_time = planning_time - (time.time() - start_time)
 
@@ -46,17 +58,26 @@ class PrioritizedPlanning:
                 total_costs += planner.path_cost
 
                 hires_path = planner.get_high_resolution_path_numpy_array()
-                radius_index = planner.agent.distance_metric_state_size
-                # hack to include radius in path
-                if hires_path.shape[1] <= radius_index:
-                    dyn_path = np.empty((hires_path.shape[0], radius_index + 1), dtype=np.float64)
-                    dyn_path[:, :radius_index] = hires_path[:, :radius_index]
-                    dyn_path[:, radius_index] = planner.agent.radius
-                    hires_path = dyn_path
+                if dynamic_obstacle_adapter is not None:
+                    dynamic_obstacle_adapter.finish_planner(
+                        planner, i, hires_path, success=True
+                    )
                 else:
-                    hires_path[:, radius_index] = planner.agent.radius
-                dyn_obs.append(hires_path)
+                    radius_index = planner.agent.distance_metric_state_size
+                    # hack to include radius in path
+                    if hires_path.shape[1] <= radius_index:
+                        dyn_path = np.empty((hires_path.shape[0], radius_index + 1), dtype=np.float64)
+                        dyn_path[:, :radius_index] = hires_path[:, :radius_index]
+                        dyn_path[:, radius_index] = planner.agent.radius
+                        hires_path = dyn_path
+                    else:
+                        hires_path[:, radius_index] = planner.agent.radius
+                    dyn_obs.append(hires_path)
             else:
+                if dynamic_obstacle_adapter is not None:
+                    dynamic_obstacle_adapter.finish_planner(
+                        planner, i, None, success=False
+                    )
                 end_time = time.time() - start_time 
                 print("Prioritized Planning low-level planner failed to find a path for agent", i, 
                       "Failed to solve the current MRMP problem using pRRT.")

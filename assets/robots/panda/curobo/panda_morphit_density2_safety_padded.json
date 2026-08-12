@@ -1,0 +1,15 @@
+{
+  "source": "C:\\Projects\\FrankaFM\\assets\\robots\\panda\\curobo\\panda_morphit_density2.yml",
+  "output": "C:\\Projects\\FrankaFM\\assets\\robots\\panda\\curobo\\panda_morphit_density2_safety_padded.yml",
+  "world_collision_spheres_changed": false,
+  "self_collision_padding_only": true,
+  "padded_links": [
+    "panda_link0",
+    "panda_link1",
+    "panda_link5",
+    "panda_link6"
+  ],
+  "padding_mm_per_link": 3.0,
+  "pair_padding_mm_when_both_links_are_padded": 6.0,
+  "reason": "Cover holdout PyBullet collisions missed by the raw MorphIt fit at panda_link0/panda_link5 and panda_link1/panda_link6."
+}

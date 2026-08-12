@@ -32,7 +32,7 @@ MRMP_SRC = ROOT_DIR / "mrmp_with_kite_extend" / "src"
 if str(MRMP_SRC) not in sys.path:
     sys.path.insert(0, str(MRMP_SRC))
 
-from Agents.FrankaPanda import FrankaSelfCollisionChecker  # noqa: E402
+from FrankaPanda import FrankaSelfCollisionChecker  # noqa: E402
 
 
 DEFAULT_INPUT = ROOT_DIR / "data" / "dataset200k.h5"

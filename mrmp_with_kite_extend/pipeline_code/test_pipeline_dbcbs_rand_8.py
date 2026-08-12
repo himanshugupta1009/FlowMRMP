@@ -169,4 +169,4 @@ for num_agents in [2, 4, 8]:
     # instantiate test pipelines 
     tp = TestPipelineDbaRandom(test_classes, agent_builders, test_rounds=10, num_agents=num_agents, master_seed=num_agents*100)
     tp.run()
-    tp.print_stats(filename="test_results/dbcbs_rand_env_rand_order_02_goal_" + str(num_agents), plots=True)
+    tp.print_stats(filename="paper_results/dbcbs_rand_env_rand_order_02_goal_" + str(num_agents), plots=True)

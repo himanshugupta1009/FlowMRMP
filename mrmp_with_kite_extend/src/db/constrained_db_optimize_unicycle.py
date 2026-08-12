@@ -722,6 +722,8 @@ class UnicycleTrajOptOptions:
     feasibility_tolerance: float = 1e-3
     retry_on_infeasible: bool = False
     allow_raw_fallback: bool = True
+    enable_time_dilation_retry: bool = True
+    time_dilation_retries: tuple[float, ...] = (1.0, 1.25, 1.5, 2.0)
 
     # For BugTrap
     # clearance_margin: float = 0.0
@@ -1353,6 +1355,57 @@ def _retry_options(options: UnicycleTrajOptOptions):
     )
 
 
+def _interpolate_angle(theta0: float, theta1: float, alpha: float) -> float:
+    return _wrap_angle(theta0 + alpha * _angle_diff(theta1, theta0))
+
+
+def _resample_unicycle_warm_start(
+    xs_init: np.ndarray,
+    us_init: np.ndarray,
+    dt: float,
+    scale: float,
+    agent,
+) -> tuple[np.ndarray, np.ndarray]:
+    if scale <= 0.0:
+        raise ValueError(f"time dilation scale must be positive, got {scale}")
+
+    xs_init = np.asarray(xs_init, dtype=np.float64)
+    us_init = np.asarray(us_init, dtype=np.float64)
+    old_n = int(us_init.shape[0])
+    if old_n <= 0 or abs(scale - 1.0) <= 1e-12:
+        return xs_init.copy(), us_init.copy()
+
+    new_n = max(old_n, int(math.ceil(scale * old_n)))
+    old_grid = np.linspace(0.0, 1.0, old_n + 1)
+    new_grid = np.linspace(0.0, 1.0, new_n + 1)
+
+    xs_out = np.empty((new_n + 1, 3), dtype=np.float64)
+    xs_out[:, 0] = np.interp(new_grid, old_grid, xs_init[:, 0])
+    xs_out[:, 1] = np.interp(new_grid, old_grid, xs_init[:, 1])
+
+    old_idx = 0
+    for i, progress in enumerate(new_grid):
+        while old_idx < old_n - 1 and old_grid[old_idx + 1] < progress:
+            old_idx += 1
+        denom = old_grid[old_idx + 1] - old_grid[old_idx]
+        alpha = 0.0 if denom <= 0.0 else (progress - old_grid[old_idx]) / denom
+        xs_out[i, 2] = _interpolate_angle(xs_init[old_idx, 2], xs_init[old_idx + 1, 2], alpha)
+
+    us_out = np.empty((new_n, 2), dtype=np.float64)
+    max_speed = float(agent.max_speed)
+    max_omega = float(agent.max_omega)
+    for i in range(new_n):
+        theta = float(xs_out[i, 2])
+        dx = float(xs_out[i + 1, 0] - xs_out[i, 0])
+        dy = float(xs_out[i + 1, 1] - xs_out[i, 1])
+        v = (dx * math.cos(theta) + dy * math.sin(theta)) / dt
+        omega = _angle_diff(float(xs_out[i + 1, 2]), theta) / dt
+        us_out[i, 0] = min(max(v, -max_speed), max_speed)
+        us_out[i, 1] = min(max(omega, -max_omega), max_omega)
+
+    return xs_out, us_out
+
+
 def _warm_start_fallback_result(planner, highres_states, us_init, options, optimizer_result):
     circles = getattr(planner, "static_circular_obstacles", None)
     rects = getattr(planner, "static_rectangular_obstacles", None)
@@ -1421,43 +1474,81 @@ def optimize_dbrrt_unicycle_path(planner,*,
             f"Warm start length mismatch: states={highres_states.shape[0]}, controls={us_init.shape[0]}"
         )
 
-    result = optimize_unicycle_warm_start(
-        start=planner.start,
-        goal_xy=planner.goal,
-        env=planner.env,
-        agent=planner.agent,
-        xs_init=highres_states,
-        us_init=us_init,
-        dt=float(planner.minimum_time_step),
-        goal_radius=float(planner.goal_radius),
-        options=options,
-        constraints=getattr(planner, "constraints", None),
-        clearance_threshold=float(getattr(planner, "clearance_threshold", 0.0)),
-        circles=getattr(planner, "static_circular_obstacles", None),
-        rects=getattr(planner, "static_rectangular_obstacles", None),
-        verbose=bool(getattr(planner, "print_logs", False) or getattr(planner, "debug_flag", False)),
-    )
+    verbose = bool(getattr(planner, "print_logs", False) or getattr(planner, "debug_flag", False))
+    debug_time_dilation = bool(getattr(planner, "debug_flag", False))
+    dt = float(planner.minimum_time_step)
+    dilation_scales = options.time_dilation_retries if options.enable_time_dilation_retry else (1.0,)
+    if len(dilation_scales) == 0:
+        dilation_scales = (1.0,)
+    if not any(abs(float(scale) - 1.0) <= 1e-12 for scale in dilation_scales):
+        dilation_scales = (1.0, *dilation_scales)
+
+    result = None
+    attempted_warm_starts: list[tuple[float, np.ndarray, np.ndarray]] = []
+    for scale in dilation_scales:
+        scale = float(scale)
+        scaled_states, scaled_us = _resample_unicycle_warm_start(
+            highres_states, us_init, dt, scale, planner.agent
+        )
+        attempted_warm_starts.append((scale, scaled_states, scaled_us))
+        if debug_time_dilation:
+            print(
+                "Time-dilation optimizer attempt: "
+                f"scale={scale}, states={scaled_states.shape[0]}, controls={scaled_us.shape[0]}"
+            )
+
+        attempt_result = optimize_unicycle_warm_start(
+            start=planner.start,
+            goal_xy=planner.goal,
+            env=planner.env,
+            agent=planner.agent,
+            xs_init=scaled_states,
+            us_init=scaled_us,
+            dt=dt,
+            goal_radius=float(planner.goal_radius),
+            options=options,
+            constraints=getattr(planner, "constraints", None),
+            clearance_threshold=float(getattr(planner, "clearance_threshold", 0.0)),
+            circles=getattr(planner, "static_circular_obstacles", None),
+            rects=getattr(planner, "static_rectangular_obstacles", None),
+            verbose=verbose,
+        )
+        if debug_time_dilation:
+            print(
+                "Time-dilation optimizer result: "
+                f"scale={scale}, feasible={attempt_result.feasible}, "
+                f"success={attempt_result.success}, iters={attempt_result.solver_iters}"
+            )
+        if attempt_result.feasible:
+            attempt_result.source = "optimized" if abs(scale - 1.0) <= 1e-12 else f"optimized_time_dilated_{scale:g}"
+            result = attempt_result
+            break
+        if result is None:
+            result = attempt_result
 
     if not result.feasible and options.retry_on_infeasible:
-        for retry_options in _retry_options(options):
-            retry_result = optimize_unicycle_warm_start(
-                start=planner.start,
-                goal_xy=planner.goal,
-                env=planner.env,
-                agent=planner.agent,
-                xs_init=highres_states,
-                us_init=us_init,
-                dt=float(planner.minimum_time_step),
-                goal_radius=float(planner.goal_radius),
-                options=retry_options,
-                constraints=getattr(planner, "constraints", None),
-                clearance_threshold=float(getattr(planner, "clearance_threshold", 0.0)),
-                circles=getattr(planner, "static_circular_obstacles", None),
-                rects=getattr(planner, "static_rectangular_obstacles", None),
-                verbose=bool(getattr(planner, "print_logs", False) or getattr(planner, "debug_flag", False)),
-            )
-            if retry_result.feasible:
-                result = retry_result
+        for _, retry_states, retry_us in attempted_warm_starts:
+            for retry_options in _retry_options(options):
+                retry_result = optimize_unicycle_warm_start(
+                    start=planner.start,
+                    goal_xy=planner.goal,
+                    env=planner.env,
+                    agent=planner.agent,
+                    xs_init=retry_states,
+                    us_init=retry_us,
+                    dt=dt,
+                    goal_radius=float(planner.goal_radius),
+                    options=retry_options,
+                    constraints=getattr(planner, "constraints", None),
+                    clearance_threshold=float(getattr(planner, "clearance_threshold", 0.0)),
+                    circles=getattr(planner, "static_circular_obstacles", None),
+                    rects=getattr(planner, "static_rectangular_obstacles", None),
+                    verbose=verbose,
+                )
+                if retry_result.feasible:
+                    result = retry_result
+                    break
+            if result.feasible:
                 break
 
     if not result.feasible and options.allow_raw_fallback:

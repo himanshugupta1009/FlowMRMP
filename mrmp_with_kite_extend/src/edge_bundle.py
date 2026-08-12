@@ -36,7 +36,6 @@ class EdgeBundle:
         for field in self._fields:
             setattr(self, field, data[field][self.chosen_indices])
         self.edge_index = 0
-        self.distance_from_random_point = np.zeros(self.num_edges)
 
         if 'final_states' not in self._fields:
             self.final_states = []
@@ -142,19 +141,6 @@ class EdgeBundle:
             Indices in this EdgeBundle (0 .. self.num_edges-1).
         """
         self.plot_edges_2d(edge_ids=edge_ids, show_starts=show_starts)
-
-
-
-class EdgeBundleTraj(EdgeBundle):
-    def __init__(self, data, fix_num_edges=1000):
-        super().__init__(data, fix_num_edges)
-        self.trajectories = data['trajectories'][:fix_num_edges]
-
-    def get_trajectory(self, traj_index):
-        if traj_index < self.num_edges:
-            return self.trajectories[traj_index]
-        else:
-            return None
 
 # Load the edge bundle
 # edge_bundle_file_location = 'edge_bundles_npz/eb_unicycle_edges_100000.npz' 

@@ -13,9 +13,11 @@ waypoints are checked for acceleration, jerk, position, velocity, and
 self-collision validity.
 
 High-level extension sequence:
-1. Sample a 14D RRT target and choose its nearest existing tree node.
+1. Sample a 14D RRT target. For Franka goal-biased samples, choose the parent
+   by normalized 7D joint position; otherwise use the normal 14D state metric.
 2. Generate or retrieve that node's flow edge bundle.
-3. Rank unused edges by predicted terminal distance to the sampled target.
+3. Rank unused Franka edges by predicted 7D joint-position distance to the
+   sampled target; target velocity is deliberately ignored for this ranking.
 4. Traverse the ranked list, propagating and validating one edge at a time.
 5. Add the first valid result; use a random-control fallback if none succeeds.
 """
@@ -59,6 +61,10 @@ class FlowEBTreeNode(KinoTIEBTreeNode):
                          path_from_parent, time_so_far, cost)
         # None means the model has not yet been queried for this tree node.
         self.flow_edge_bundle = None
+        # The expensive physical 128-edge goal scan is useful only once for a
+        # fixed node-local bundle. After all crossing prefixes are rejected,
+        # later goal queries use the original 32-edge policy directly.
+        self.goal_pool_search_complete = False
 
 
 class GeneratedEdgeBundle:
@@ -120,6 +126,24 @@ class GeneratedSequenceEdgeBundle:
     def release_edge(self, edge_index):
         """Release a sequence after its one permitted RRT trial to save memory."""
         self.action_sequences[int(edge_index)] = None
+
+    def extend(self, other):
+        """Append another independently sampled bundle for the same start state."""
+        if not isinstance(other, GeneratedSequenceEdgeBundle):
+            raise TypeError("can only merge Franka sequence edge bundles")
+        if not np.isclose(self.action_dt, other.action_dt):
+            raise ValueError("cannot merge bundles with different integration steps")
+        if self.start_states.shape[1:] != other.start_states.shape[1:]:
+            raise ValueError("cannot merge bundles with different state shapes")
+        self.action_sequences.extend(other.action_sequences)
+        self.actions = self.action_sequences
+        self.timesteps = np.concatenate((self.timesteps, other.timesteps))
+        self.start_states = np.concatenate((self.start_states, other.start_states))
+        self.final_states = np.concatenate((self.final_states, other.final_states))
+        self.relative_changes = np.concatenate(
+            (self.relative_changes, other.relative_changes)
+        )
+        self.num_edges = len(self.action_sequences)
 
 
 # ---------------------------------------------------------------------------
@@ -680,6 +704,8 @@ class FlowEBRRT(KinoTIEBRRT):
                  num_skip_edges=10,
                  num_random_edges=1,
                  epsilon_random=0.01,
+                 goal_edge_pool_multiplier=1,
+                 goal_edge_pool_radius_multiplier=1.25,
                  udf_seed=77,
                  goal_sampling_probability=0.1,
                  dynamic_agent_clearance=0.0,
@@ -732,6 +758,12 @@ class FlowEBRRT(KinoTIEBRRT):
         self.flow_edge_generator = flow_edge_generator
         self.node_class = FlowEBTreeNode
         self.flow_prefetch_batch_size = max(1, int(flow_prefetch_batch_size))
+        self.goal_edge_pool_multiplier = max(1, int(goal_edge_pool_multiplier))
+        self.goal_edge_pool_radius_multiplier = float(
+            goal_edge_pool_radius_multiplier
+        )
+        if self.goal_edge_pool_radius_multiplier < 1.0:
+            raise ValueError("goal_edge_pool_radius_multiplier must be at least 1")
         # Retained in the public configuration for checkpoint/benchmark
         # compatibility. Full-duration execution means target-based truncation
         # no longer consumes this value; only a verified goal-reaching prefix
@@ -770,6 +802,13 @@ class FlowEBRRT(KinoTIEBRRT):
             "sequence_available_steps": 0,
             "sequence_acceleration_rejections": 0,
             "sequence_jerk_rejections": 0,
+            "goal_pool_activations": 0,
+            "goal_pool_generated_edges": 0,
+            "goal_pool_propagated_edges": 0,
+            "goal_pool_goal_crossing_edges": 0,
+            "goal_pool_goal_candidates_checked": 0,
+            "goal_pool_solutions": 0,
+            "goal_pool_progress_fallbacks": 0,
         }
 
     def set_profile_enabled(self, enabled):
@@ -882,8 +921,119 @@ class FlowEBRRT(KinoTIEBRRT):
             if node.edge_bundle_indices is None:
                 self._attach_flow_edge_bundle(node, edge_bundle)
 
+    def _goal_pool_is_active(self, parent_node):
+        """Return whether this goal query should use the larger near-goal pool."""
+        if not self._last_sample_was_goal or self.goal_edge_pool_multiplier <= 1:
+            return False
+        if parent_node.goal_pool_search_complete:
+            return False
+        if not hasattr(parent_node.flow_edge_bundle, "action_sequences"):
+            return False
+        _, distance = self.reached_goal(
+            parent_node.state, self.goal, self.goal_radius, self.agent
+        )
+        return distance <= self.goal_edge_pool_radius_multiplier * self.goal_radius
+
+    def _augment_goal_edge_pool(self, parent_node):
+        """Grow one node's cached 32-edge bundle to the configured goal pool."""
+        edge_bundle = parent_node.flow_edge_bundle
+        target_count = self.flow_edge_generator.set_size * self.goal_edge_pool_multiplier
+        missing = target_count - edge_bundle.num_edges
+        if missing <= 0:
+            return
+        bundle_size = self.flow_edge_generator.set_size
+        batch_size = int(np.ceil(missing / bundle_size))
+        states = np.repeat(parent_node.state[None, :], batch_size, axis=0)
+        t0 = time.perf_counter()
+        additions = self.flow_edge_generator.sample_batch(
+            states, num_edges=bundle_size
+        )
+        self.profile["flow_generation_s"] += time.perf_counter() - t0
+        self.profile["flow_generation_calls"] += 1
+        self.profile["flow_generated_bundles"] += len(additions)
+        old_count = edge_bundle.num_edges
+        for addition in additions:
+            edge_bundle.extend(addition)
+        if edge_bundle.num_edges > target_count:
+            raise RuntimeError("goal edge pool exceeded its configured size")
+        parent_node.edge_bundle_indices = np.arange(
+            edge_bundle.num_edges, dtype=np.int64
+        )
+        parent_node.edge_bundle_mask = np.concatenate((
+            parent_node.edge_bundle_mask,
+            np.zeros(edge_bundle.num_edges - old_count, dtype=bool),
+        ))
+        self.profile["goal_pool_generated_edges"] += edge_bundle.num_edges - old_count
+
+    def _rank_goal_pool_candidates(self, parent_node):
+        """Physically propagate and rank near-goal edges by their true waypoints.
+
+        Goal-crossing candidates are ordered by earliest entry into the goal
+        region. Remaining candidates are ordered by minimum normalized 7D
+        configuration distance, and retain the prefix ending at that closest
+        waypoint so fallback motion cannot overshoot its best progress.
+        No collision query is performed here.
+        """
+        edge_bundle = parent_node.flow_edge_bundle
+        candidates = []
+        for mask_index, edge_index in enumerate(parent_node.edge_bundle_indices):
+            if parent_node.edge_bundle_mask[mask_index]:
+                continue
+            if self._deadline_reached():
+                break
+            edge_index = int(edge_index)
+            action = edge_bundle.action_sequences[edge_index]
+            if action is None:
+                parent_node.edge_bundle_mask[mask_index] = True
+                continue
+            violation = None
+            if hasattr(self.agent, "action_sequence_violation"):
+                violation = self.agent.action_sequence_violation(
+                    action, edge_bundle.action_dt
+                )
+            if violation is not None:
+                if violation == "jerk":
+                    self.profile["sequence_jerk_rejections"] += 1
+                    if hasattr(self.agent, "jerk_rejections"):
+                        self.agent.jerk_rejections += 1
+                else:
+                    self.profile["sequence_acceleration_rejections"] += 1
+                    if hasattr(self.agent, "acceleration_rejections"):
+                        self.agent.acceleration_rejections += 1
+                edge_bundle.release_edge(edge_index)
+                parent_node.edge_bundle_mask[mask_index] = True
+                continue
+            _, path = self.agent.get_next_state_sequence(
+                parent_node.state, action, edge_bundle.action_dt
+            )
+            self.profile["goal_pool_propagated_edges"] += 1
+            distances = np.asarray([
+                self.reached_goal(state, self.goal, self.goal_radius, self.agent)[1]
+                for state in path
+            ])
+            goal_indices = np.flatnonzero(distances <= self.goal_radius)
+            goal_index = int(goal_indices[0]) if goal_indices.size else None
+            closest_index = int(np.argmin(distances))
+            if goal_index is not None:
+                self.profile["goal_pool_goal_crossing_edges"] += 1
+            candidates.append({
+                "mask_index": mask_index,
+                "edge_index": edge_index,
+                "path": path,
+                "goal_index": goal_index,
+                "closest_index": closest_index,
+                "minimum_distance": float(distances[closest_index]),
+            })
+        goal_candidates = sorted(
+            (item for item in candidates if item["goal_index"] is not None),
+            key=lambda item: (item["goal_index"], item["minimum_distance"]),
+        )
+        return goal_candidates
+
     def _try_edge_from_bundle(self, edge_bundle_index, parent_node,
-        parent_node_id, mask_index, curr_edge_mask, debug_prefix=""):
+        parent_node_id, mask_index, curr_edge_mask, debug_prefix="",
+        prepropagated_path=None, execution_prefix_steps=None,
+        goal_prefix_only=False):
         """Propagate, validate, and possibly add one ranked candidate edge.
 
         Returns True when the edge either adds a normal node or reaches the
@@ -922,15 +1072,24 @@ class FlowEBRRT(KinoTIEBRRT):
                     curr_edge_mask[mask_index] = True
                     self.profile["try_edge_s"] += time.perf_counter() - t0
                     return False
+            if execution_prefix_steps is not None:
+                prefix_steps = max(1, min(int(execution_prefix_steps), len(action)))
+                action = action[:prefix_steps]
             self.profile["sequence_edges_executed"] += 1
             self.profile["sequence_executed_steps"] += len(action)
             self.profile["sequence_available_steps"] += available_steps
             timestep = float(len(action) * edge_bundle.action_dt)
             # This propagation, not the FM-predicted endpoint, determines the
             # state and intermediate waypoints considered for tree insertion.
-            new_state, path_to_new_state = self.agent.get_next_state_sequence(
-                parent_node.state, action, edge_bundle.action_dt
-            )
+            if prepropagated_path is None:
+                new_state, path_to_new_state = self.agent.get_next_state_sequence(
+                    parent_node.state, action, edge_bundle.action_dt
+                )
+            else:
+                path_to_new_state = np.asarray(
+                    prepropagated_path[:len(action)], dtype=np.float64
+                )
+                new_state = path_to_new_state[-1]
             edge_bundle.release_edge(edge_bundle_index)
         else:
             timestep = float(edge_bundle.timesteps[edge_bundle_index])
@@ -990,6 +1149,18 @@ class FlowEBRRT(KinoTIEBRRT):
                     curr_edge_mask[mask_index] = True
                     self.profile["try_edge_s"] += time.perf_counter() - t0
                     return False
+                if goal_prefix_only:
+                    # This candidate reaches the goal but cannot remain there
+                    # safely. Try the next goal-crossing candidate instead of
+                    # accepting its later overshooting endpoint as a transit.
+                    curr_edge_mask[mask_index] = True
+                    self.profile["try_edge_s"] += time.perf_counter() - t0
+                    return False
+
+        if goal_prefix_only:
+            curr_edge_mask[mask_index] = True
+            self.profile["try_edge_s"] += time.perf_counter() - t0
+            return False
 
         # Validate every propagated waypoint against the agent's joint/velocity
         # limits, self-collision checker, and any environment constraints.
@@ -1080,13 +1251,16 @@ class FlowEBRRT(KinoTIEBRRT):
 
     def _sort_sequence_edges(self, edge_bundle, random_point, curr_edge_indices,
                              curr_edge_mask):
-        """Rank untried edges using the FM-predicted relative terminal state.
+        """Rank untried edges using predicted terminal joint positions only.
 
         This deliberately performs no control propagation. Propagation and all
         validity checks happen later, in sorted order, inside
-        ``_try_edge_from_bundle``.
+        ``_try_edge_from_bundle``. Franka completion is defined by normalized
+        7D configuration distance, so candidate velocity is not part of this
+        goal-directed ranking. Velocity remains part of dynamics, validity,
+        and the RRT's kinodynamic nearest-node metric.
         """
-        target = self._distance_metric_state(random_point)
+        target_q = self._distance_metric_state(random_point)[:7]
         count = len(curr_edge_indices)
         num_valid = 0
         for local_index, edge_index in enumerate(curr_edge_indices):
@@ -1100,12 +1274,19 @@ class FlowEBRRT(KinoTIEBRRT):
                 curr_edge_mask[local_index] = True
                 edge_bundle.release_edge(edge_index)
                 continue
-            predicted_endpoint = self._distance_metric_state(
-                predicted_final_state
-            )
-            self.distance_array[local_index] = float(
-                np.linalg.norm(predicted_endpoint - target)
-            )
+            if hasattr(getattr(self, "agent", None), "get_flow_edge_ranking_distance"):
+                self.distance_array[local_index] = (
+                    self.agent.get_flow_edge_ranking_distance(
+                        predicted_final_state,
+                        random_point,
+                        self._last_sample_was_goal,
+                    )
+                )
+            else:
+                predicted_q = self._distance_metric_state(predicted_final_state)[:7]
+                self.distance_array[local_index] = float(
+                    np.linalg.norm(predicted_q - target_q)
+                )
             num_valid += 1
         order = np.argsort(self.distance_array[:count], kind="stable")
         return order[:num_valid], num_valid
@@ -1119,6 +1300,33 @@ class FlowEBRRT(KinoTIEBRRT):
         result = self._try_random_control(parent_node, parent_node_id, random_point)
         self.profile["random_control_s"] += time.perf_counter() - t0
         return result
+
+    def _extend_near_goal_with_pool(self, parent_node_id, parent_node, random_point):
+        """Try the 128-edge physical near-goal policy for one goal query."""
+        self.profile["goal_pool_activations"] += 1
+        self._augment_goal_edge_pool(parent_node)
+        if self._deadline_reached():
+            return True
+        goal_candidates = self._rank_goal_pool_candidates(parent_node)
+        for candidate in goal_candidates:
+            if self._deadline_reached():
+                return True
+            self.profile["goal_pool_goal_candidates_checked"] += 1
+            if self._try_edge_from_bundle(
+                candidate["edge_index"], parent_node, parent_node_id,
+                candidate["mask_index"], parent_node.edge_bundle_mask,
+                debug_prefix="[goal-pool crossing] ",
+                prepropagated_path=candidate["path"],
+                execution_prefix_steps=candidate["goal_index"] + 1,
+                goal_prefix_only=True,
+            ):
+                self.profile["goal_pool_solutions"] += 1
+                return True
+        # Do not turn a non-goal candidate into a truncated progress edge.
+        # Returning False lets the caller run the original 32-edge policy and
+        # its existing short random-control fallback unchanged.
+        parent_node.goal_pool_search_complete = True
+        return False
 
     def extend_tree(self, parent_node_id, parent_node, random_point):
         """Perform one flow-guided extension toward a sampled 14D target.
@@ -1141,9 +1349,21 @@ class FlowEBRRT(KinoTIEBRRT):
         self._ensure_flow_edges_for_node(parent_node)
         if self._deadline_reached():
             return
+        if self._goal_pool_is_active(parent_node):
+            if self._extend_near_goal_with_pool(
+                parent_node_id, parent_node, random_point
+            ):
+                return
         eb = parent_node.flow_edge_bundle
-        curr_edge_indices = parent_node.edge_bundle_indices
-        curr_edge_mask = parent_node.edge_bundle_mask
+        # The larger pool is goal-crossing-only. Ordinary extension and the
+        # fallback after an unsuccessful goal-pool query retain the original
+        # checkpoint-sized 32-edge policy.
+        base_edge_count = min(
+            self.flow_edge_generator.set_size,
+            len(parent_node.edge_bundle_indices),
+        )
+        curr_edge_indices = parent_node.edge_bundle_indices[:base_edge_count]
+        curr_edge_mask = parent_node.edge_bundle_mask[:base_edge_count]
 
         t0 = time.perf_counter()
         if hasattr(eb, "action_sequences"):
@@ -1194,6 +1414,13 @@ class FlowEBRRT(KinoTIEBRRT):
             "sequence_available_steps",
             "sequence_acceleration_rejections",
             "sequence_jerk_rejections",
+            "goal_pool_activations",
+            "goal_pool_generated_edges",
+            "goal_pool_propagated_edges",
+            "goal_pool_goal_crossing_edges",
+            "goal_pool_goal_candidates_checked",
+            "goal_pool_solutions",
+            "goal_pool_progress_fallbacks",
         ):
             print(f"  {key}: {self.profile[key]}")
         for key in (
@@ -1271,6 +1498,8 @@ def get_flow_eb_rrt_planner_franka(
     num_skip_edges=32,
     num_random_edges=1,
     epsilon_random=0.05,
+    goal_edge_pool_multiplier=4,
+    goal_edge_pool_radius_multiplier=1.25,
     goal_sampling_probability=0.30,
     seed=0,
 ):
@@ -1307,13 +1536,17 @@ def get_flow_eb_rrt_planner_franka(
         reached_goal_function=agent.agent_reached_goal,
         translate_function=agent.kd_tree_point_translate_function,
         sort_edges_function=agent.sort_kd_tree_edges,
-        max_num_edges_per_node=flow_generator.set_size,
+        max_num_edges_per_node=(
+            flow_generator.set_size * max(1, int(goal_edge_pool_multiplier))
+        ),
         flow_prefetch_batch_size=flow_prefetch_batch_size,
         minimum_sequence_prefix_steps=minimum_sequence_prefix_steps,
         truncate_sequence_to_target=truncate_sequence_to_target,
         num_skip_edges=num_skip_edges,
         num_random_edges=num_random_edges,
         epsilon_random=epsilon_random,
+        goal_edge_pool_multiplier=goal_edge_pool_multiplier,
+        goal_edge_pool_radius_multiplier=goal_edge_pool_radius_multiplier,
         udf_seed=seed,
         goal_sampling_probability=goal_sampling_probability,
         debug_flag=False,

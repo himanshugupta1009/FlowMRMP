@@ -1,0 +1,243 @@
+{
+  "generator": "cuRobo RobotBuilder + SphereFitType.MORPHIT",
+  "curobo_version": "0.8.0.post1.dev42",
+  "torch_version": "2.8.0+cu126",
+  "cuda_runtime": "12.6",
+  "gpu": "NVIDIA GeForce RTX 2060",
+  "gpu_compute_capability": [
+    7,
+    5
+  ],
+  "seed": 20260805,
+  "sphere_density": 10.0,
+  "iterations": 300,
+  "coverage_weight": 1000.0,
+  "protrusion_weight": 100.0,
+  "used_collision_mesh": true,
+  "urdf": "C:\\Projects\\FrankaFM\\assets\\robots\\panda\\panda.urdf",
+  "urdf_sha256": "32e9be7d8957f26136274578993a1c34de48badcc9f051ad8c9d20b32031829f",
+  "srdf": "C:\\Projects\\FrankaFM\\assets\\robots\\panda\\panda.srdf",
+  "srdf_sha256": "95aae52d0ba6ae278b747b63fe880ca72e97e4b72f5404af3fc2cc7882e1f197",
+  "movable_joint_names": [
+    "panda_joint1",
+    "panda_joint2",
+    "panda_joint3",
+    "panda_joint4",
+    "panda_joint5",
+    "panda_joint6",
+    "panda_joint7"
+  ],
+  "tool_frames": [
+    "panda_grasptarget"
+  ],
+  "collision_link_names": [
+    "panda_link0",
+    "panda_link1",
+    "panda_link2",
+    "panda_link3",
+    "panda_link4",
+    "panda_link5",
+    "panda_link6",
+    "panda_link7",
+    "panda_hand",
+    "panda_leftfinger",
+    "panda_rightfinger"
+  ],
+  "sphere_count": 270,
+  "sphere_count_by_link": {
+    "panda_link0": 33,
+    "panda_link1": 35,
+    "panda_link2": 46,
+    "panda_link3": 34,
+    "panda_link4": 39,
+    "panda_link5": 51,
+    "panda_link6": 19,
+    "panda_link7": 5,
+    "panda_hand": 4,
+    "panda_leftfinger": 2,
+    "panda_rightfinger": 2
+  },
+  "self_collision_ignore": {
+    "panda_hand": [
+      "panda_leftfinger",
+      "panda_link3",
+      "panda_link4",
+      "panda_link6",
+      "panda_link7",
+      "panda_rightfinger"
+    ],
+    "panda_leftfinger": [
+      "panda_link3",
+      "panda_link4",
+      "panda_link6",
+      "panda_link7",
+      "panda_rightfinger"
+    ],
+    "panda_link0": [
+      "panda_link1",
+      "panda_link2",
+      "panda_link3",
+      "panda_link4"
+    ],
+    "panda_link1": [
+      "panda_link2",
+      "panda_link3",
+      "panda_link4"
+    ],
+    "panda_link2": [
+      "panda_link3",
+      "panda_link4",
+      "panda_link6"
+    ],
+    "panda_link3": [
+      "panda_link4",
+      "panda_link5",
+      "panda_link6",
+      "panda_link7",
+      "panda_rightfinger"
+    ],
+    "panda_link4": [
+      "panda_link5",
+      "panda_link6",
+      "panda_link7",
+      "panda_rightfinger"
+    ],
+    "panda_link5": [
+      "panda_link6"
+    ],
+    "panda_link6": [
+      "panda_link7",
+      "panda_rightfinger"
+    ],
+    "panda_link7": [
+      "panda_rightfinger"
+    ]
+  },
+  "self_collision_ignore_pair_count": 34,
+  "self_collision_buffer_m": 0.0,
+  "metrics_by_link": {
+    "panda_link0": {
+      "num_spheres": 33,
+      "coverage": 0.9687999486923218,
+      "protrusion": 0.49106061458587646,
+      "protrusion_dist_mean": 0.008308145217597485,
+      "protrusion_dist_p95": 0.02024131268262863,
+      "surface_gap_mean": 0.000955937197431922,
+      "surface_gap_p95": 0.007356550544500351,
+      "max_uncovered_gap": 0.018294230103492737,
+      "volume_ratio": 11.200946753495078
+    },
+    "panda_link1": {
+      "num_spheres": 35,
+      "coverage": 0.9910999536514282,
+      "protrusion": 0.5425714254379272,
+      "protrusion_dist_mean": 0.012063439935445786,
+      "protrusion_dist_p95": 0.026052357628941536,
+      "surface_gap_mean": 0.00020520099496934563,
+      "surface_gap_p95": 0.0011028896551579237,
+      "max_uncovered_gap": 0.011069752275943756,
+      "volume_ratio": 9.595606588483477
+    },
+    "panda_link2": {
+      "num_spheres": 46,
+      "coverage": 0.9957999587059021,
+      "protrusion": 0.5193478465080261,
+      "protrusion_dist_mean": 0.012866929173469543,
+      "protrusion_dist_p95": 0.028843168169260025,
+      "surface_gap_mean": 0.00010297031258232892,
+      "surface_gap_p95": 0.0,
+      "max_uncovered_gap": 0.006961829960346222,
+      "volume_ratio": 11.14129154817997
+    },
+    "panda_link3": {
+      "num_spheres": 34,
+      "coverage": 0.9972110986709595,
+      "protrusion": 0.5317646861076355,
+      "protrusion_dist_mean": 0.009160120971500874,
+      "protrusion_dist_p95": 0.021781982854008675,
+      "surface_gap_mean": 7.594554335810244e-05,
+      "surface_gap_p95": 0.0,
+      "max_uncovered_gap": 0.006232813000679016,
+      "volume_ratio": 8.217416441820067
+    },
+    "panda_link4": {
+      "num_spheres": 39,
+      "coverage": 0.9986840486526489,
+      "protrusion": 0.5648717880249023,
+      "protrusion_dist_mean": 0.011082589626312256,
+      "protrusion_dist_p95": 0.024179382249712944,
+      "surface_gap_mean": 3.6559409636538476e-05,
+      "surface_gap_p95": 0.0,
+      "max_uncovered_gap": 0.0063296034932136536,
+      "volume_ratio": 8.629199054026873
+    },
+    "panda_link5": {
+      "num_spheres": 51,
+      "coverage": 0.9906999468803406,
+      "protrusion": 0.5641176104545593,
+      "protrusion_dist_mean": 0.010549230501055717,
+      "protrusion_dist_p95": 0.02308443747460842,
+      "surface_gap_mean": 0.0002958245459012687,
+      "surface_gap_p95": 0.0026874698232859373,
+      "max_uncovered_gap": 0.008283205330371857,
+      "volume_ratio": 10.403643841719031
+    },
+    "panda_link6": {
+      "num_spheres": 19,
+      "coverage": 0.9625292420387268,
+      "protrusion": 0.5757894515991211,
+      "protrusion_dist_mean": 0.007166743278503418,
+      "protrusion_dist_p95": 0.01640011928975582,
+      "surface_gap_mean": 0.0005747815012000501,
+      "surface_gap_p95": 0.004188825376331806,
+      "max_uncovered_gap": 0.012700047343969345,
+      "volume_ratio": 4.5813048851977936
+    },
+    "panda_link7": {
+      "num_spheres": 5,
+      "coverage": 0.9589999914169312,
+      "protrusion": 0.5760000348091125,
+      "protrusion_dist_mean": 0.006174154579639435,
+      "protrusion_dist_p95": 0.014614855870604515,
+      "surface_gap_mean": 0.0006681143422611058,
+      "surface_gap_p95": 0.004099748563021421,
+      "max_uncovered_gap": 0.011718809604644775,
+      "volume_ratio": 1.2829843942410248
+    },
+    "panda_hand": {
+      "num_spheres": 4,
+      "coverage": 0.8360999822616577,
+      "protrusion": 0.6087499856948853,
+      "protrusion_dist_mean": 0.008433430455625057,
+      "protrusion_dist_p95": 0.01777081936597824,
+      "surface_gap_mean": 0.0023494884371757507,
+      "surface_gap_p95": 0.01090887188911438,
+      "max_uncovered_gap": 0.021406129002571106,
+      "volume_ratio": 0.8021144601972515
+    },
+    "panda_leftfinger": {
+      "num_spheres": 2,
+      "coverage": 0.8603000044822693,
+      "protrusion": 0.6875,
+      "protrusion_dist_mean": 0.0031057714950293303,
+      "protrusion_dist_p95": 0.007504734676331282,
+      "surface_gap_mean": 0.0007931150612421334,
+      "surface_gap_p95": 0.003517803270369768,
+      "max_uncovered_gap": 0.006271119229495525,
+      "volume_ratio": 1.0085505216451482
+    },
+    "panda_rightfinger": {
+      "num_spheres": 2,
+      "coverage": 0.8872999548912048,
+      "protrusion": 0.6974999904632568,
+      "protrusion_dist_mean": 0.002566778101027012,
+      "protrusion_dist_p95": 0.005785387475043535,
+      "surface_gap_mean": 0.0006845756433904171,
+      "surface_gap_p95": 0.0031315437518060207,
+      "max_uncovered_gap": 0.006639635190367699,
+      "volume_ratio": 0.9565068819138574
+    }
+  },
+  "output": "C:\\Projects\\FrankaFM\\assets\\robots\\panda\\curobo\\panda_morphit_d10_c1000_p100.yml",
+  "output_sha256": "b5df15cb7525a4bc185268ca8780f6f6d861445c64d93a8c20a647566ddffa22"
+}

@@ -90,10 +90,8 @@ db_rrt_planner.print_logs = True
 db_rrt_planner.plan_path()
 
 node_ids, states, actions, timesteps = db_rrt_planner.get_path()
-
-v = RRTPrinter(env, db_rrt_planner, node_ids)
-v.print_rrt("media/db_rrt_unicycle.png", print_tree=True)
-
+# v = RRTPrinter(env, db_rrt_planner, node_ids)
+# v.print_rrt("media/db_rrt_unicycle.png", print_tree=True)
 verify_rollout_consistency(db_rrt_planner)
 
 

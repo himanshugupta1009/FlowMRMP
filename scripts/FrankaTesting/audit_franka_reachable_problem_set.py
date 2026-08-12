@@ -18,10 +18,12 @@ from franka_paths import (
     DEFAULT_URDF,
 )
 
-if str(FLOWMRMP_SRC) not in sys.path:
-    sys.path.insert(0, str(FLOWMRMP_SRC))
+MAIN_SCRIPTS = Path(__file__).resolve().parents[1]
+for module_path in (MAIN_SCRIPTS, FLOWMRMP_SRC):
+    if str(module_path) not in sys.path:
+        sys.path.insert(0, str(module_path))
 
-from Agents.FrankaPanda import (  # noqa: E402
+from FrankaPanda import (  # noqa: E402
     DDQ_MAX,
     DQ_MAX,
     Q_LOWER,

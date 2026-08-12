@@ -1,0 +1,5 @@
+coordination,base_planner,difficulty,trials,successes,success_percent,successful_planning_mean_seconds,successful_planning_median_seconds,successful_path_makespan_mean_seconds,successful_path_makespan_median_seconds,all_trial_tree_nodes_total,all_trial_checked_waypoints_total,successful_tree_nodes_mean,successful_checked_waypoints_mean
+prioritized,flow,easy,20,14,70.0,3.572266621428883,3.439231150001433,0.6871428571428572,0.58,11478,377537,98.78571428571429,3736.4285714285716
+prioritized,flow,medium,20,5,25.0,17.61902122000174,17.34826140000223,8.292,8.02,31231,1058448,692.4,27444.4
+prioritized,flow,hard,20,0,0.0,,,,,47312,1486531,,
+prioritized,flow,all,60,19,31.666666666666668,7.268780989474372,4.421442600003502,2.688421052631579,0.6,90021,2922516,255.0,9975.368421052632

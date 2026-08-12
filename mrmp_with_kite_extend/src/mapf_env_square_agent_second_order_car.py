@@ -16,7 +16,7 @@ def get_second_order_car_agent(agent_id):
                        max_phi = np.pi/3,
                        max_steering_rate = 0.5,
                        radius = 0.3,
-                       wheelbase = 0.7,
+                       wheelbase = 0.6,
                        rng_seed=42
                        )
     return agent

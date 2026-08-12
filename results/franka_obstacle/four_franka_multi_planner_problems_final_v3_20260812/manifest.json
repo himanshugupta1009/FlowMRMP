@@ -1,0 +1,81 @@
+{
+  "created_utc": "2026-08-12T14:45:06.801428+00:00",
+  "format": "four_franka_easy_medium_hard_exact_spheres_v1",
+  "generator_seed": 2026081207,
+  "dataset": "C:\\Users\\sodan\\Downloads\\dataset200k.h5",
+  "dataset_sha256": "8af36a91b832fe52f12d25ec38dec605525e669e2f97c1573ca2feee5de89d92",
+  "problem_file": "C:\\Projects\\FrankaFM\\results\\franka_obstacle\\four_franka_multi_planner_problems_final_v3_20260812\\four_franka_easy_medium_hard.npz",
+  "problem_file_sha256": "ab2902605e87a0ee85d8ca26bf2420ee208bddacc815ea97c8a5b435188bb55b",
+  "sphere_count_per_robot": 295,
+  "pybullet_used": false,
+  "endpoint_candidate_attempts": 122,
+  "valid_candidate_counts_by_robot": [
+    3664,
+    3667,
+    3667,
+    3664
+  ],
+  "difficulty_rule": {
+    "easy": "0/39 invalid samples; every arm is 0.42..0.52 normalized q units from a goal radius of 0.40",
+    "medium": "1..12/39 invalid samples; <=2 colliding arm pairs; mean motion >=1.5",
+    "hard": ">=13/39 invalid samples; >=2 colliding arm pairs; mean motion >=1.7"
+  },
+  "problems": [
+    {
+      "problem_id": 0,
+      "label": "easy",
+      "endpoint_pair_indices": [
+        33,
+        -1
+      ],
+      "interpolation_samples": 41,
+      "invalid_interior_samples": 0,
+      "interarm_collision_samples": 0,
+      "static_or_self_invalid_samples": 0,
+      "colliding_pairs": [],
+      "colliding_pair_count": 0,
+      "mean_normalized_q_distance": 0.4750098472917391,
+      "minimum_normalized_q_distance": 0.4477472037530988,
+      "maximum_normalized_q_distance": 0.4952892495287967
+    },
+    {
+      "problem_id": 1,
+      "label": "medium",
+      "endpoint_pair_indices": [
+        86,
+        77
+      ],
+      "interpolation_samples": 41,
+      "invalid_interior_samples": 1,
+      "interarm_collision_samples": 1,
+      "static_or_self_invalid_samples": 0,
+      "colliding_pairs": [
+        "2-3"
+      ],
+      "colliding_pair_count": 1,
+      "mean_normalized_q_distance": 1.806000998373222,
+      "minimum_normalized_q_distance": 1.299303572479651,
+      "maximum_normalized_q_distance": 2.553195884757278
+    },
+    {
+      "problem_id": 2,
+      "label": "hard",
+      "endpoint_pair_indices": [
+        107,
+        97
+      ],
+      "interpolation_samples": 41,
+      "invalid_interior_samples": 18,
+      "interarm_collision_samples": 18,
+      "static_or_self_invalid_samples": 0,
+      "colliding_pairs": [
+        "0-1",
+        "2-3"
+      ],
+      "colliding_pair_count": 2,
+      "mean_normalized_q_distance": 2.0368903149628284,
+      "minimum_normalized_q_distance": 1.7664384117711953,
+      "maximum_normalized_q_distance": 2.183630388564612
+    }
+  ]
+}

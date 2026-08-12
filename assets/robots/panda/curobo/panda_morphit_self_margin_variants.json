@@ -1,0 +1,42 @@
+{
+  "source": "C:\\Projects\\FrankaFM\\assets\\robots\\panda\\curobo\\panda_morphit_density2.yml",
+  "world_collision_spheres_changed": false,
+  "self_collision_pair_distance_only": true,
+  "outputs": [
+    {
+      "path": "C:\\Projects\\FrankaFM\\assets\\robots\\panda\\curobo\\panda_morphit_density2_selfmargin1mm.yml",
+      "total_pair_margin_mm": 1.0,
+      "per_link_buffer_m": -0.0005
+    },
+    {
+      "path": "C:\\Projects\\FrankaFM\\assets\\robots\\panda\\curobo\\panda_morphit_density2_selfmargin2mm.yml",
+      "total_pair_margin_mm": 2.0,
+      "per_link_buffer_m": -0.001
+    },
+    {
+      "path": "C:\\Projects\\FrankaFM\\assets\\robots\\panda\\curobo\\panda_morphit_density2_selfmargin3mm.yml",
+      "total_pair_margin_mm": 3.0,
+      "per_link_buffer_m": -0.0015
+    },
+    {
+      "path": "C:\\Projects\\FrankaFM\\assets\\robots\\panda\\curobo\\panda_morphit_density2_selfmargin5mm.yml",
+      "total_pair_margin_mm": 5.0,
+      "per_link_buffer_m": -0.0025
+    },
+    {
+      "path": "C:\\Projects\\FrankaFM\\assets\\robots\\panda\\curobo\\panda_morphit_density2_selfmargin7p5mm.yml",
+      "total_pair_margin_mm": 7.5,
+      "per_link_buffer_m": -0.00375
+    },
+    {
+      "path": "C:\\Projects\\FrankaFM\\assets\\robots\\panda\\curobo\\panda_morphit_density2_selfmargin10mm.yml",
+      "total_pair_margin_mm": 10.0,
+      "per_link_buffer_m": -0.005
+    },
+    {
+      "path": "C:\\Projects\\FrankaFM\\assets\\robots\\panda\\curobo\\panda_morphit_density2_selfmargin15mm.yml",
+      "total_pair_margin_mm": 15.0,
+      "per_link_buffer_m": -0.0075
+    }
+  ]
+}

@@ -30,7 +30,7 @@ if __name__ == "__main__":
     planning_time = 300.0
     for num_agents in [4, 6, 8, 10, 15, 20]:
         for gr in [1.]:
-            savepath = "test_results/final_test_results/RANDOM_ALL_SOC_CRRT_UPDATES_A" + str(num_agents) + "_gr" + str(gr)
+            savepath = "paper_results/final_test_results/RANDOM_ALL_SOC_CRRT_UPDATES_A" + str(num_agents) + "_gr" + str(gr)
             os.makedirs(savepath, exist_ok=True) 
             # collect test classes
             test_classes = [

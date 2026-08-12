@@ -37,7 +37,7 @@ from train_franka_edge_flow_matching import (
 )
 
 
-from Agents.FrankaPanda import FrankaSelfCollisionChecker  # noqa: E402
+from FrankaPanda import FrankaSelfCollisionChecker  # noqa: E402
 
 
 DEFAULT_DATASET = (
@@ -498,8 +498,8 @@ def main() -> None:
             "scripts/train_franka_edge_flow_matching.py": file_sha256(
                 ROOT_DIR / "scripts" / "train_franka_edge_flow_matching.py"
             ),
-            "mrmp_with_kite_extend/src/Agents/FrankaPanda.py": file_sha256(
-                MRMP_SRC / "Agents" / "FrankaPanda.py"
+            "scripts/FrankaPanda.py": file_sha256(
+                TRAINING_SCRIPTS_DIR / "FrankaPanda.py"
             ),
         },
         "num_conditions": count,

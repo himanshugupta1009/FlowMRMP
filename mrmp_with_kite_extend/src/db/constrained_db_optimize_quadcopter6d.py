@@ -816,6 +816,8 @@ class Quadcopter6DTrajOptResult:
     us: np.ndarray
     cost: float
     solver_iters: int
+    optimizer_output_feasible: bool = False
+    source: str = ""
     path_view: Optional["OptimizedTrajectoryView3D"] = None
 
 

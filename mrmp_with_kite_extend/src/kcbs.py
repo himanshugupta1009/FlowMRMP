@@ -42,8 +42,11 @@ class KCBS:
                 rng_seed = 11,
                 debug_flag=False,
                 print_logs=False,
-                prune_tree=False,
-                is_collision_function=is_collision_math
+                reuse_tree=False,
+                store_cbs_nodes=False,
+                is_collision_function=is_collision_math,
+                conflict_detector=None,
+                constraint_builder=None,
                 ):
         self.env = env
         self.num_agents = len(agents)
@@ -59,6 +62,8 @@ class KCBS:
         self.path_cost = float('inf')
         self.path_cbs_node = None
         self.is_collision_function = is_collision_function
+        self.conflict_detector = conflict_detector
+        self.constraint_builder = constraint_builder
         self.cbs_priority_queue = []
         self.tie_breaker = itertools.count()
         self.rng_seed = rng_seed
@@ -66,7 +71,9 @@ class KCBS:
         self.print_logs = print_logs
         self.debug_flag = debug_flag
         self.clearance_threshold = clearance_threshold
-        self.prune_tree = prune_tree
+        self.reuse_tree = bool(reuse_tree)
+        self.store_cbs_nodes = store_cbs_nodes
+        self.cbs_node_count = 0
 
         self.roundoff_digits = find_roundoff_decimal_digits(self.minimum_time_step)
         seeds_low_level_planners = self.kcbs_rng.integers(0, 10000, size=self.num_agents)
@@ -80,7 +87,7 @@ class KCBS:
             planner.rng_seed = seeds_low_level_planners[i]
             planner.rng = np.random.default_rng(seeds_low_level_planners[i])
             planner.dynamic_agent_clearance = self.clearance_threshold
-            planner.prune_tree = self.prune_tree
+            planner.reuse_tree = self.reuse_tree
 
         #Loop through all agents and define an array of agent ids
         self.array_agent_id = np.array([agent.id for agent in agents])
@@ -107,7 +114,7 @@ class KCBS:
                 raise ValueError("All agents must have the same distance metric state size.")
         self.distance_metric_state_size = val
 
-        self.node_list = DynamicArray(1000,object)
+        self.node_list = DynamicArray(1000, object) if self.store_cbs_nodes else []
 
         self.collision_count = np.zeros((self.num_agents,self.num_agents), 
                                         dtype=np.int64)
@@ -126,10 +133,14 @@ class KCBS:
         curr_kcbs_node_counter = 1
 
         #Find initial paths for all agents
-        all_paths, all_trees, all_costs = find_initial_paths(self.low_level_planners)
+        deadline = start_time + self.planning_time
+        all_paths, all_trees, all_costs = find_initial_paths(
+            self.low_level_planners, deadline=deadline)
         start_cbs_node = KCBSTreeNode(curr_kcbs_node_counter, no_conflicts_list, all_paths, all_trees, all_costs)
         curr_kcbs_node_counter += 1
-        self.node_list.set(start_cbs_node.id, start_cbs_node)
+        self.cbs_node_count += 1
+        if self.store_cbs_nodes:
+            self.node_list.set(start_cbs_node.id, start_cbs_node)
 
         #Define a priority queue
         start_node_cost = start_cbs_node.total_cost
@@ -167,6 +178,12 @@ class KCBS:
                 for agent_index in range(self.num_agents):
                     if( cbs_node.agent_path_costs[agent_index] == float('inf')):
                         agent_path_planner = self.low_level_planners[agent_index]
+                        agent_path_planner.planning_time = max(
+                            0.0, deadline - time.time())
+                        # Re-install this CBS node's constraints because the
+                        # shared planner may still hold constraints installed
+                        # while expanding a different branch.
+                        agent_path_planner.set_constraints(cbs_node.conflicts[agent_index])
                         t = cbs_node.agent_trees[agent_index]
                         agent_path_planner.reset_tree(some_existing_tree=t)
                         agent_path_planner.replan_path()
@@ -184,9 +201,14 @@ class KCBS:
 
             else:
                 #Path has been found for all the agents. Check if any of the paths collide.
-                curr_cbs_node_conflicts = find_first_collision_numba(cbs_node.agent_paths, 
-                            self.agents_state_length,self.agents_radius,self.distance_metric_state_size,
-                            self.clearance_threshold,self.roundoff_digits)
+                if self.conflict_detector is None:
+                    curr_cbs_node_conflicts = find_first_collision_numba(cbs_node.agent_paths,
+                                self.agents_state_length,self.agents_radius,self.distance_metric_state_size,
+                                self.clearance_threshold,self.roundoff_digits,
+                                self.minimum_time_step)
+                else:
+                    curr_cbs_node_conflicts = self.conflict_detector(
+                        list(cbs_node.agent_paths), self.minimum_time_step)
                 #If no collisions, you have found a solution
                 if len(curr_cbs_node_conflicts[0]) == 0:
                     self.path_found = True
@@ -224,7 +246,13 @@ class KCBS:
                     #use the existing lists in the recently popped cbs_node from the 
                     #priority queue and modify them.
                     curr_first_agent_conflicts = new_cbs_node_conflicts[first_agent_index]
-                    new_conflict = (collision_keys, second_agent_positions, second_agent_radius)
+                    new_conflict = (
+                        (collision_keys, second_agent_positions, second_agent_radius)
+                        if self.constraint_builder is None
+                        else self.constraint_builder(
+                            first_agent_index, second_agent_index,
+                            collision_keys, second_agent_positions)
+                    )
                     new_first_agent_conflicts = copy_numba_list(curr_first_agent_conflicts)                    
                     #Add the new conflicts to the first collision agent
                     new_first_agent_conflicts.append( new_conflict )
@@ -233,6 +261,8 @@ class KCBS:
 
                     #Replan the path for the first collision agent
                     first_agent_planner = self.low_level_planners[first_agent_index]
+                    first_agent_planner.planning_time = max(
+                        0.0, deadline - time.time())
                     first_agent_planner.set_constraints(new_first_agent_conflicts)
                     curr_first_agent_tree_structure = new_cbs_node_trees[first_agent_index]
                     # if(cbs_node.id == 2):
@@ -252,7 +282,9 @@ class KCBS:
                     #Create a new CBS node with the updated conflicts, paths, trees and path costs
                     new_node1 = KCBSTreeNode(new_cbs_node_id,new_cbs_node_conflicts, new_cbs_node_paths, 
                                             new_cbs_node_trees, new_cbs_node_path_costs)
-                    self.node_list.set(new_node1.id, new_node1)
+                    self.cbs_node_count += 1
+                    if self.store_cbs_nodes:
+                        self.node_list.set(new_node1.id, new_node1)
 
                     if(self.debug_flag):
                         print("Replanned path for agent ", first_agent_index, 
@@ -267,7 +299,13 @@ class KCBS:
                         
                     #Now add conflicts for the second collision agent and replan its path
                     curr_second_agent_conflicts = new_cbs_node_conflicts[second_agent_index]
-                    new_conflict = (collision_keys, first_agent_positions, first_agent_radius)
+                    new_conflict = (
+                        (collision_keys, first_agent_positions, first_agent_radius)
+                        if self.constraint_builder is None
+                        else self.constraint_builder(
+                            second_agent_index, first_agent_index,
+                            collision_keys, first_agent_positions)
+                    )
                     new_second_agent_conflicts = copy_numba_list(curr_second_agent_conflicts)                    
                     #Add the new conflicts to the second collision agent
                     new_second_agent_conflicts.append( new_conflict )
@@ -276,6 +314,8 @@ class KCBS:
 
                     #Replan the path for the second collision agent
                     second_agent_planner = self.low_level_planners[second_agent_index]
+                    second_agent_planner.planning_time = max(
+                        0.0, deadline - time.time())
                     second_agent_planner.set_constraints(new_second_agent_conflicts)
                     curr_second_agent_tree_structure = new_cbs_node_trees[second_agent_index]
                     # if(cbs_node.id == 2):
@@ -299,7 +339,9 @@ class KCBS:
                     #Create a new CBS node with the updated conflicts, paths, trees and path costs
                     new_node2 = KCBSTreeNode(new_cbs_node_id, new_cbs_node_conflicts, new_cbs_node_paths, 
                                             new_cbs_node_trees, new_cbs_node_path_costs)
-                    self.node_list.set(new_node2.id, new_node2)
+                    self.cbs_node_count += 1
+                    if self.store_cbs_nodes:
+                        self.node_list.set(new_node2.id, new_node2)
 
                     if(self.debug_flag):
                         print("Adding two new nodes to the priority queue with costs ",
@@ -352,7 +394,8 @@ def get_position(agent_path, index):
 def find_first_collision_numba(agent_paths,agent_state_lengths,
                                agent_radiuses,distance_metric_state_size,
                                dynamic_agent_clearance=0.0,
-                               roundoff_digits=1):
+                               roundoff_digits=1,
+                               minimum_time_step=0.1):
 
     start_conflict = True
     starting_collision_key = 0
@@ -407,6 +450,10 @@ def find_first_collision_numba(agent_paths,agent_state_lengths,
                             starting_collision_key = index
                             start_conflict = False
                             collision_length = 1
+                        elif is_collision:
+                            # The collision continues through the last state,
+                            # so that terminal timestep belongs to the window.
+                            collision_length = index - starting_collision_key + 1
                         else:
                             collision_length = index - starting_collision_key
                         first_agent_position_array = np.empty((collision_length,first_agent_state_length))
@@ -420,7 +467,10 @@ def find_first_collision_numba(agent_paths,agent_state_lengths,
                         #Create collision keys
                         collision_keys = np.empty(collision_length, dtype=np.float64)
                         for i in range(collision_length):
-                            collision_keys[i] = round(0.1*(starting_collision_key + i), roundoff_digits)
+                            collision_keys[i] = round(
+                                minimum_time_step * (starting_collision_key + i),
+                                roundoff_digits,
+                            )
 
                         return collision_keys, ind_first_agent, first_agent_position_array, \
                                 ind_second_agent, second_agent_position_array
@@ -430,13 +480,15 @@ def find_first_collision_numba(agent_paths,agent_state_lengths,
                     np.empty((0,0),dtype=np.float64)
 
 
-def find_initial_paths(low_level_planners):
+def find_initial_paths(low_level_planners, deadline=None):
     paths = List()
     trees = []
     costs = List()
 
     for i in range(len(low_level_planners)):
         low_level_planner = low_level_planners[i]
+        if deadline is not None:
+            low_level_planner.planning_time = max(0.0, deadline - time.time())
         low_level_planner.plan_path()
         p = low_level_planner.get_high_resolution_path_numpy_array()
         paths.append(p)
@@ -449,7 +501,8 @@ def find_initial_paths(low_level_planners):
 def check_high_resolution_paths_collision_free(high_resolution_paths,agents,
                                 distance_metric_state_size=None,
                                 dynamic_agent_clearance=0.0,
-                                roundoff_digits=1,):
+                                roundoff_digits=1,
+                                minimum_time_step=0.1,):
 
     if distance_metric_state_size is None:
         distance_metric_state_size = agents[0].distance_metric_state_size
@@ -481,6 +534,7 @@ def check_high_resolution_paths_collision_free(high_resolution_paths,agents,
             distance_metric_state_size,
             dynamic_agent_clearance=dynamic_agent_clearance,
             roundoff_digits=roundoff_digits,
+            minimum_time_step=minimum_time_step,
         )
     )
 

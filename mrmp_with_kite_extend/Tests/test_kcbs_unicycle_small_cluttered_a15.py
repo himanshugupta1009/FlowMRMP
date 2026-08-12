@@ -33,7 +33,17 @@ starts = [
     (4.0, 3.0, 0.0),
     (14.0, 1.0, 0.0),
     (6.0, 8.0, 0.0),
-    (7.0, 1.0, 0.0)
+    (7.0, 1.0, 0.0),
+    (2.5, 2.5, 0.0),
+    (11.0, 1.0, 0.0),
+    (1.0, 14.0, 0.0),
+    (12.0, 9.5, 0.0),
+    (5.5, 10.0, 0.0),
+    (9.5, 13.5, 0.0),
+    (14.0, 6.0, 0.0),
+    (5.0, 6.5, 0.0),
+    (11.5, 6.5, 0.0),
+    (2.8, 7.2, 0.0)
 
 ]
 
@@ -56,8 +66,18 @@ goals = [
     (8.0, 3.0),
     (6.0, 11.0),
     (9.0, 8.0),
-    (10.0, 12.0), 
-    (3.0, 9.0)
+    (10.0, 12.0),
+    (3.0, 9.0),
+    (13.8, 11.0),
+    (2.5, 6.0),
+    (11.5, 13.5),
+    (5.5, 4.0),
+    (14.0, 5.0),
+    (1.2, 13.8),
+    (6.2, 6.2),
+    (12.2, 7.0),
+    (3.5, 10.8),
+    (8.8, 4.8)
 ]
 
 obstacles = [
@@ -76,7 +96,7 @@ obstacles = [
 ]
 
 seed = int(os.environ.get("DEBUG_SEED", "1502"))
-num_agents = 18
+num_agents = int(os.environ.get("DEBUG_NUM_AGENTS", "30"))
 goal_radius = 0.5
 planning_time = float(os.environ.get("DEBUG_TIME", "300.0"))
 kd_tree_delta_radius = 0.1
@@ -94,7 +114,7 @@ planners = []
 planner_function = get_rrt_planner
 # planner_function = get_eb_rrt_planner
 planner_function = get_kino_TI_eb_rrt_planner_unicycle
-# planner_function = get_constrained_db_rrt_planner_unicycle
+planner_function = get_constrained_db_rrt_planner_unicycle
 for i in range(num_agents):
     planners.append(planner_function(starts[i],goals[i],goal_radius,
                                      agents[i],env))
@@ -140,13 +160,13 @@ for run_idx, s in enumerate(kcbs_seeds, start=1):
     elapsed = time.time() - t0
 
     results.append((s, path_found, cost, delta_t, elapsed,
-                    kcbs_planner.node_list.count))
+                    kcbs_planner.cbs_node_count))
 
     print("Path found:", path_found)
     print("Cost:", cost)
     print("KCBS reported time:", delta_t)
     print("Wall time:", elapsed)
-    print("Conflict node count:", kcbs_planner.node_list.count)
+    print("Conflict node count:", kcbs_planner.cbs_node_count)
     print("Collision count matrix:")
     print(kcbs_planner.collision_count)
 

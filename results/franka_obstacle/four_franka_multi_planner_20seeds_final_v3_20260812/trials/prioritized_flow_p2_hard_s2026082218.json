@@ -1,0 +1,83 @@
+{
+  "coordination": "prioritized",
+  "base_planner": "flow",
+  "problem_id": 2,
+  "difficulty": "hard",
+  "trial_seed": 2026082218,
+  "success": false,
+  "planner_solved": false,
+  "audit_passed": false,
+  "planning_time_seconds": 30.000298299997667,
+  "path_makespan_seconds": null,
+  "path_mean_agent_time_seconds": null,
+  "path_cost": null,
+  "tree_nodes": 3136,
+  "high_level_nodes": 0,
+  "iterations": 4456,
+  "checked_waypoints": 98421,
+  "per_agent_path_times_seconds": [],
+  "audit": {
+    "reason": "planner_failed"
+  },
+  "generations": [
+    {
+      "generation": 0,
+      "robot_index": 0,
+      "robot_name": "northwest",
+      "success": false,
+      "planning_time_seconds": 30.002469301223755,
+      "iterations": 4456,
+      "nodes": 3136,
+      "path_motion_time_seconds": null,
+      "path_cost": null,
+      "checked_waypoints": 98421,
+      "limit_rejections": 1292,
+      "self_or_static_collision_rejections": 1047,
+      "inter_robot_collision_rejections": 0,
+      "collision_profile": {
+        "collision_batches": 5474,
+        "collision_waypoints": 127175,
+        "sphere_fk_seconds": 4.368729800084111,
+        "self_static_seconds": 6.955039699994813,
+        "dynamic_collision_seconds": 0.0,
+        "dynamic_sphere_pair_tests": 0,
+        "dynamic_collision_batches_rejected": 0,
+        "goal_parking_queries": 0,
+        "goal_parking_sphere_pair_tests": 0
+      },
+      "planner_profile": {
+        "flow_generation_s": 9.883460100001685,
+        "sort_edges_s": 1.4219809999449353,
+        "try_edge_s": 14.792862199941737,
+        "random_control_s": 3.6110165000245615,
+        "extend_calls": 4457,
+        "flow_generation_calls": 205,
+        "flow_generated_bundles": 3015,
+        "flow_cache_hits": 4019,
+        "flow_cache_misses": 205,
+        "flow_prefetch_select_s": 0.0035478000208968297,
+        "try_edge_calls": 3935,
+        "random_control_calls": 1539,
+        "sequence_edges_executed": 3935,
+        "sequence_executed_steps": 114866,
+        "sequence_available_steps": 114866,
+        "sequence_acceleration_rejections": 0,
+        "sequence_jerk_rejections": 0
+      },
+      "flow_generator_profile": {
+        "samples": 3015,
+        "sample_total_s": 9.878017199996975,
+        "model_s": 9.468149700016511,
+        "postprocess_s": 0.372968200044852
+      }
+    }
+  ],
+  "planner_profile": {},
+  "flow_generator_profile": {
+    "samples": 3015,
+    "sample_total_s": 9.878017199996975,
+    "model_s": 9.468149700016511,
+    "postprocess_s": 0.372968200044852
+  },
+  "completed_utc": "2026-08-12T15:31:55.769526+00:00"
+}

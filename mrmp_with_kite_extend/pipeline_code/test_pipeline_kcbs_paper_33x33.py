@@ -231,7 +231,7 @@ for num_agents in [20]:
     tp = TestPipelinePaperRandom(test_classes, agent_builders, test_rounds=50, num_agents=num_agents, master_seed=num_agents*100, num_obs=11, obstacle_types=[RectangleObstacle2D])
 
     tp.run()
-    tp.print_stats(filename="test_results/KCBS_Paper_33x33_Env_KCBS_PRRT_" + str(num_agents), plots=True)
+    tp.print_stats(filename="paper_results/KCBS_Paper_33x33_Env_KCBS_PRRT_" + str(num_agents), plots=True)
 
 # for num_agents in range(10):
 #     # collect test classes

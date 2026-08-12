@@ -1,0 +1,90 @@
+{
+  "coordination": "prioritized",
+  "base_planner": "flow",
+  "problem_id": 0,
+  "difficulty": "easy",
+  "trial_seed": 2026082201,
+  "success": false,
+  "planner_solved": false,
+  "audit_passed": false,
+  "planning_time_seconds": 30.002172799999244,
+  "path_makespan_seconds": null,
+  "path_mean_agent_time_seconds": null,
+  "path_cost": null,
+  "tree_nodes": 1124,
+  "high_level_nodes": 0,
+  "iterations": 1189,
+  "checked_waypoints": 28649,
+  "per_agent_path_times_seconds": [],
+  "audit": {
+    "reason": "planner_failed"
+  },
+  "generations": [
+    {
+      "generation": 0,
+      "robot_index": 0,
+      "robot_name": "northwest",
+      "success": false,
+      "planning_time_seconds": 30.003716468811035,
+      "iterations": 1189,
+      "nodes": 1124,
+      "path_motion_time_seconds": null,
+      "path_cost": null,
+      "checked_waypoints": 28649,
+      "limit_rejections": 196,
+      "self_or_static_collision_rejections": 82,
+      "inter_robot_collision_rejections": 0,
+      "collision_profile": {
+        "collision_batches": 1401,
+        "collision_waypoints": 33412,
+        "sphere_fk_seconds": 1.6294815999644925,
+        "self_static_seconds": 2.4485961999671417,
+        "dynamic_collision_seconds": 0.0,
+        "dynamic_sphere_pair_tests": 0,
+        "dynamic_collision_batches_rejected": 0,
+        "goal_parking_queries": 0,
+        "goal_parking_sphere_pair_tests": 0
+      },
+      "planner_profile": {
+        "flow_generation_s": 7.026645900004951,
+        "sort_edges_s": 0.39230749982380075,
+        "try_edge_s": 5.7079922000921215,
+        "random_control_s": 0.5123371000227053,
+        "extend_calls": 1190,
+        "flow_generation_calls": 84,
+        "flow_generated_bundles": 1079,
+        "flow_cache_hits": 1042,
+        "flow_cache_misses": 80,
+        "flow_prefetch_select_s": 0.0011253999909968115,
+        "try_edge_calls": 1258,
+        "random_control_calls": 143,
+        "sequence_edges_executed": 1258,
+        "sequence_executed_steps": 32178,
+        "sequence_available_steps": 41391,
+        "sequence_acceleration_rejections": 0,
+        "sequence_jerk_rejections": 0,
+        "goal_pool_activations": 323,
+        "goal_pool_generated_edges": 384,
+        "goal_pool_propagated_edges": 16642,
+        "goal_pool_goal_crossing_edges": 0,
+        "goal_pool_goal_candidates_checked": 0,
+        "goal_pool_solutions": 0,
+        "goal_pool_progress_fallbacks": 257
+      },
+      "flow_generator_profile": {
+        "samples": 1079,
+        "sample_total_s": 7.024412000057055,
+        "model_s": 6.85181140005443,
+        "postprocess_s": 0.14717850002489286
+      }
+    }
+  ],
+  "planner_profile": {},
+  "flow_generator_profile": {
+    "samples": 1079,
+    "sample_total_s": 7.024412000057055,
+    "model_s": 6.85181140005443,
+    "postprocess_s": 0.14717850002489286
+  },
+  "completed_utc": "2026-08-12T19:05:50.805257+00:00"
+}

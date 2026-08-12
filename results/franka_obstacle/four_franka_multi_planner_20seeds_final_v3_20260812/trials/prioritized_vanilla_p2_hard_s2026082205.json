@@ -1,0 +1,55 @@
+{
+  "coordination": "prioritized",
+  "base_planner": "vanilla",
+  "problem_id": 2,
+  "difficulty": "hard",
+  "trial_seed": 2026082205,
+  "success": false,
+  "planner_solved": false,
+  "audit_passed": false,
+  "planning_time_seconds": 30.02232609999919,
+  "path_makespan_seconds": null,
+  "path_mean_agent_time_seconds": null,
+  "path_cost": null,
+  "tree_nodes": 354,
+  "high_level_nodes": 0,
+  "iterations": 495,
+  "checked_waypoints": 74620,
+  "per_agent_path_times_seconds": [],
+  "audit": {
+    "reason": "planner_failed"
+  },
+  "generations": [
+    {
+      "generation": 0,
+      "robot_index": 0,
+      "robot_name": "northwest",
+      "success": false,
+      "planning_time_seconds": 30.03440022468567,
+      "iterations": 495,
+      "nodes": 354,
+      "path_motion_time_seconds": null,
+      "path_cost": null,
+      "checked_waypoints": 74620,
+      "limit_rejections": 4175,
+      "self_or_static_collision_rejections": 2144,
+      "inter_robot_collision_rejections": 0,
+      "collision_profile": {
+        "collision_batches": 7936,
+        "collision_waypoints": 201310,
+        "sphere_fk_seconds": 6.675824200039642,
+        "self_static_seconds": 13.254772199969011,
+        "dynamic_collision_seconds": 0.0,
+        "dynamic_sphere_pair_tests": 0,
+        "dynamic_collision_batches_rejected": 0,
+        "goal_parking_queries": 0,
+        "goal_parking_sphere_pair_tests": 0
+      },
+      "planner_profile": {},
+      "flow_generator_profile": {}
+    }
+  ],
+  "planner_profile": {},
+  "flow_generator_profile": {},
+  "completed_utc": "2026-08-12T15:00:29.169027+00:00"
+}

@@ -1,9 +1,8 @@
 import gc
-import os
 import random 
 import numpy as np
-import numpy.ma as ma
-import traceback
+import os
+from contextlib import redirect_stdout
 
 from experiment_manifest import write_pipeline_manifest
 from test_pipeline_random import TestPipeline
@@ -13,7 +12,8 @@ sys.path.append('src')
 
 from Environments import *
 from printer_3d import MultiRRTPrinter3d
-
+from test_classes import *
+from agent_builders import *
 
 class TestPipelineOpen3d(TestPipeline):
     def __init__(self, test_classes, agent_builders, test_rounds=100, num_agents=5, master_seed=42, 
@@ -42,38 +42,36 @@ class TestPipelineOpen3d(TestPipeline):
 
     def get_starts_goals(self, seed, agents):
         """
-        Generates evenly distributed starts and goals on a sphere.
+        Generates antipodal swap starts and goals on a sphere.
         """
 
         goal_radius = self.goal_radius
         N = self.num_agents
+        num_swap_pairs = N // 2
 
-        # Sphere radius safely inside environment bounds
+        # Sphere radius safely inside environment bounds. With env_dim=10, this is 4.0.
         radius = min(self.env_width, self.env_bredth, self.env_height) / 2.0 - 1.0
         cx = self.env_width / 2.0
         cy = self.env_bredth / 2.0
         cz = self.env_height / 2.0
 
-        # Fibonacci sphere
+        # Fibonacci-style directions on one hemisphere. Each direction and its
+        # antipode form an exact swap pair with straight-line distance 2 * radius.
         golden_angle = np.pi * (3.0 - np.sqrt(5.0))
 
-        possible_starts = []
-        thetas = []  # yaw angles, not used for now
-
-        for i in range(N):
-            z = 1.0 - (2.0 * i) / (N - 1)
+        swap_pairs = []
+        for i in range(num_swap_pairs):
+            z = (i + 0.5) / num_swap_pairs
             r_xy = np.sqrt(max(0.0, 1.0 - z * z))
             phi = golden_angle * i
 
-            x = cx + radius * r_xy * np.cos(phi)
-            y = cy + radius * r_xy * np.sin(phi)
-            z = cz + radius * z
+            ux = r_xy * np.cos(phi)
+            uy = r_xy * np.sin(phi)
+            uz = z
 
-            # Face toward the center of the sphere
-            yaw = np.arctan2(cy - y, cx - x)
-
-            possible_starts.append((x, y, z))
-            thetas.append(yaw)
+            plus = (cx + radius * ux, cy + radius * uy, cz + radius * uz)
+            minus = (cx - radius * ux, cy - radius * uy, cz - radius * uz)
+            swap_pairs.append((plus, minus))
 
         starts = []
         goals = []
@@ -84,8 +82,37 @@ class TestPipelineOpen3d(TestPipeline):
         # self.rng.shuffle(agent_id_order)
         print("Agent Order:", agent_id_order)
 
+        extra_start = None
+        extra_goal = None
+        if N % 2 == 1:
+            extra_angle = np.pi / 4.0
+            extra_start = (
+                cx + radius * np.cos(extra_angle),
+                cy + radius * np.sin(extra_angle),
+                cz,
+            )
+            extra_goal = (
+                cx - radius * np.cos(extra_angle),
+                cy - radius * np.sin(extra_angle),
+                cz,
+            )
+            print("Odd agent count:", N)
+            print("Base exact-swap agent count:", N - 1)
+            print("Extra start:", extra_start)
+            print("Extra goal:", extra_goal)
+
         for i in agent_id_order:
-            sx, sy, sz = possible_starts[i]
+            if i < 2 * num_swap_pairs:
+                plus, minus = swap_pairs[i // 2]
+                if i % 2 == 0:
+                    sx, sy, sz = plus
+                    goal = minus
+                else:
+                    sx, sy, sz = minus
+                    goal = plus
+            else:
+                sx, sy, sz = extra_start
+                goal = extra_goal
 
             starts.append(
                 agents[i].get_start(
@@ -96,8 +123,7 @@ class TestPipelineOpen3d(TestPipeline):
                 )
             )
 
-            goal_index = (i + N // 2) % N
-            goals.append(possible_starts[goal_index])
+            goals.append(goal)
             goal_radii.append(goal_radius)
 
         return starts, goals, goal_radii, goal_area
@@ -130,23 +156,40 @@ class TestPipelineOpen3d(TestPipeline):
         # empty list is for obstacles
         return agents, starts, obstacles, goals, goal_radii
 
-
-from test_classes import *
-from agent_builders import *
-from contextlib import redirect_stdout
     
 if __name__ == "__main__":
-    agent_builders = [QuadcopterBuilder()]
+    agent_builders = [
+        # QuadcopterBuilder(
+        #     motion_primitive_file_location="motion_primitives/quadcopter6d_long_50_1000_primitives.npz",
+        #     num_motion_primitives=1000,
+        #     radius=0.3,),
+        # QuadcopterBuilder(
+        #     motion_primitive_file_location="motion_primitives/quadcopter6d_dbcbs_15_1100_primitives.npz",
+        #     num_motion_primitives=1100,
+        #     radius=0.3,),
+        QuadcopterBuilder(
+            motion_primitive_file_location="motion_primitives/quadcopter6d_long_50_max_length_6000_primitives.npz",
+            num_motion_primitives=6000,
+            radius=0.3,),
+    ]
     planning_time = 300.0
-    save_root = "test_results/new_final_results/swap_3d_env"
     test_rounds = 100
-    gr = 0.3
+    gr = 0.5
+    optimizer_static_time_mode = "fixed_time"
+    optimizer_constrained_time_mode = "fixed_time"
+    optimizer_solver_ids = {
+        "fixed_time": 0,
+        "free_time": 1,
+    }
+    solver_id_static = optimizer_solver_ids[optimizer_static_time_mode]
+    solver_id_constrained = optimizer_solver_ids[optimizer_constrained_time_mode]
+    save_root = f"paper_results/results_9June2026/swap_3d_env/MP_6000_{optimizer_static_time_mode}/"
+    # save_root = "paper_results/tests_kcbs_dbRRT_quad/MP_6000/AR_0p3_GR_0p5/free_time/swap_3d_env"
+    # save_root = "paper_results/tests_kcbs_dbRRT_quad/MP_1100/AR_0p3_GR_0p5/free_time/swap_3d_env"
     kd_tree_delta_radius = .10
     seed_multiplier = 200
-    num_processes = 30
     survival_min_successes = 1
     env_dim = 10.0
-
     surviving_classes = {}
     surviving_classes[QuadcopterBuilder] = None
 
@@ -165,8 +208,16 @@ if __name__ == "__main__":
                 failed.append(test_class.name)
         return failed
 
-    for agent_count in [2,3,4,5,6,8,10,15,20,25,30]:
+    def get_num_processes(agent_count):
+        # if agent_count <= 10:
+        #     return 100
+        # if agent_count < 20:
+        #     return 50
+        return 15
+
+    for agent_count in [2, 3, 4, 5, 8, 10, 12, 15, 18, 20, 23, 25, 27, 30]:
         master_seed = agent_count * seed_multiplier
+        num_processes = get_num_processes(agent_count)
 
         for agent_builder in agent_builders:
             savepath = os.path.join(
@@ -183,7 +234,13 @@ if __name__ == "__main__":
             test_classes = [
                 KcbsTestClass(max_planning_time=planning_time, obs_buffers=False), 
                 KcbsKinoTiEbTestClass(max_planning_time=planning_time, obs_buffers=False),
-                KcbsDbrrtTestClass(max_planning_time=planning_time, obs_buffers=False),
+                KcbsDbrrtTestClass(max_planning_time=planning_time, obs_buffers=False,
+                    optimizer_backend="cpp_dynoplan",
+                    cpp_optimizer_options=CppDynoplanQuadcopter6DOptimizerOptions(
+                        solver_id_static=solver_id_static,
+                        solver_id_constrained=solver_id_constrained,
+                    ),
+                ),
                 PrrtTestClass(max_planning_time=planning_time, obs_buffers=False),
                 PrioritizedKinoTIRRTTestClass(max_planning_time=planning_time, obs_buffers=False),
                 CRRTTestClass(max_planning_time=planning_time,
@@ -207,19 +264,29 @@ if __name__ == "__main__":
                                     num_agents=agent_count, master_seed=master_seed,
                                     env_width=env_dim, env_bredth=env_dim, env_height=env_dim,
                                     savepath=savepath, goal_radius=gr, processes=num_processes)
+            extra_experiment_config = {
+                "agent_type": agent_builder.name,
+                "planning_time": planning_time,
+                "kd_tree_delta_radius": kd_tree_delta_radius,
+                "seed_multiplier": seed_multiplier,
+                "survival_min_successes": survival_min_successes,
+                "num_processes": num_processes,
+                "env_dim": env_dim,
+            }
+            if isinstance(agent_builder, QuadcopterBuilder):
+                extra_experiment_config.update({
+                    "dbrrt_optimizer_backend": "cpp_dynoplan",
+                    "dbrrt_optimizer_static_time_mode": optimizer_static_time_mode,
+                    "dbrrt_optimizer_constrained_time_mode": optimizer_constrained_time_mode,
+                    "dbrrt_solver_id_static": solver_id_static,
+                    "dbrrt_solver_id_constrained": solver_id_constrained,
+                })
             write_pipeline_manifest(
                 pipeline=tp,
                 savepath=savepath,
                 pipeline_file=__file__,
                 environment_name="swap_3d_env",
-                extra_experiment_config={
-                    "agent_type": agent_builder.name,
-                    "planning_time": planning_time,
-                    "kd_tree_delta_radius": kd_tree_delta_radius,
-                    "seed_multiplier": seed_multiplier,
-                    "survival_min_successes": survival_min_successes,
-                    "env_dim": env_dim,
-                },
+                extra_experiment_config=extra_experiment_config,
             )
             with open(savepath+'/log.txt', 'w') as f, redirect_stdout(f):
                 tp.run()

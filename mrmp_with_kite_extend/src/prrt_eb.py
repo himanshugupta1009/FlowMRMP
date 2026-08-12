@@ -217,7 +217,9 @@ class EdgeBundlePRRT(EdgeBundleType2RRT):
                                                     self.minimum_time_step):
                                     if self.debug_flag:
                                         print("Goal state will collide with high-priority agent. Trying again!")
-                                    return
+                                    # This arrival cannot remain at the goal,
+                                    # but a later state on the edge may be safe.
+                                    continue
                                 
                                 modified_edge_time = total_elapsed_time - parent_node.time_elapsed
                                 new_path_to_new_state = path_to_new_state[:index+1]

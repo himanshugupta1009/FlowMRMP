@@ -1,0 +1,83 @@
+{
+  "coordination": "prioritized",
+  "base_planner": "vanilla",
+  "problem_id": 1,
+  "difficulty": "medium",
+  "trial_seed": 2026082215,
+  "success": false,
+  "planner_solved": false,
+  "audit_passed": false,
+  "planning_time_seconds": 30.03890339999998,
+  "path_makespan_seconds": null,
+  "path_mean_agent_time_seconds": null,
+  "path_cost": null,
+  "tree_nodes": 372,
+  "high_level_nodes": 0,
+  "iterations": 476,
+  "checked_waypoints": 71934,
+  "per_agent_path_times_seconds": [],
+  "audit": {
+    "reason": "planner_failed"
+  },
+  "generations": [
+    {
+      "generation": 0,
+      "robot_index": 0,
+      "robot_name": "northwest",
+      "success": true,
+      "planning_time_seconds": 28.31967854499817,
+      "iterations": 459,
+      "nodes": 353,
+      "path_motion_time_seconds": 2.9,
+      "path_cost": 2.9000000000000004,
+      "checked_waypoints": 68554,
+      "limit_rejections": 5885,
+      "self_or_static_collision_rejections": 4,
+      "inter_robot_collision_rejections": 0,
+      "collision_profile": {
+        "collision_batches": 7357,
+        "collision_waypoints": 190212,
+        "sphere_fk_seconds": 6.238015099803306,
+        "self_static_seconds": 12.242833300158964,
+        "dynamic_collision_seconds": 0.0,
+        "dynamic_sphere_pair_tests": 0,
+        "dynamic_collision_batches_rejected": 0,
+        "goal_parking_queries": 0,
+        "goal_parking_sphere_pair_tests": 0
+      },
+      "planner_profile": {},
+      "flow_generator_profile": {}
+    },
+    {
+      "generation": 1,
+      "robot_index": 1,
+      "robot_name": "northeast",
+      "success": false,
+      "planning_time_seconds": 1.7270417213439941,
+      "iterations": 17,
+      "nodes": 19,
+      "path_motion_time_seconds": null,
+      "path_cost": null,
+      "checked_waypoints": 3380,
+      "limit_rejections": 212,
+      "self_or_static_collision_rejections": 0,
+      "inter_robot_collision_rejections": 1,
+      "collision_profile": {
+        "collision_batches": 288,
+        "collision_waypoints": 7601,
+        "sphere_fk_seconds": 0.262449399993784,
+        "self_static_seconds": 0.3981152000160364,
+        "dynamic_collision_seconds": 0.7359702999892761,
+        "dynamic_sphere_pair_tests": 661477025,
+        "dynamic_collision_batches_rejected": 25,
+        "goal_parking_queries": 0,
+        "goal_parking_sphere_pair_tests": 0
+      },
+      "planner_profile": {},
+      "flow_generator_profile": {}
+    }
+  ],
+  "planner_profile": {},
+  "flow_generator_profile": {},
+  "completed_utc": "2026-08-12T14:55:28.211579+00:00"
+}

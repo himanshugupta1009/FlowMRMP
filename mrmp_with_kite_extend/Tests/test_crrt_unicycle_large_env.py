@@ -69,12 +69,7 @@ agent_ids = []
 agents = []
 for agent_id in range(num_agents):
     agent_ids.append(agent_id)
-    agent = UniCycle(agent_id = agent_id, 
-                     max_speed = 0.5,
-                     max_omega= 2.0,
-                     radius = 0.4,
-                     rng_seed= 42
-                     )
+    agent = get_unicycle_agent(agent_id=agent_id)
     agents.append(agent)
 
 goal_radii = [goal_radius for _ in range(num_agents)]
